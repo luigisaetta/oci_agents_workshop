@@ -100,3 +100,14 @@ python agent01.py "Explain what a Dedicated AI Cluster is in OCI."
 
 When using DAC in these examples, the `OCI_MODEL_ID` value must be the OCID of the DAC endpoint.
 The DAC endpoint must be public for these examples.
+
+## Oracle Support Libraries
+
+Integration with OCI Enterprise AI can be implemented in different ways.
+One practical option, especially for LangChain/LangGraph development, is based on:
+
+- `langchain-oci`
+- `langchain-oracledb`
+
+Reference repository:
+[oracle/langchain-oracle](https://github.com/oracle/langchain-oracle)
