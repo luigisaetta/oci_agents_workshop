@@ -46,7 +46,7 @@ If no PDF is found, the API falls back to the fake knowledge base.
 From project root:
 
 ```bash
-python simple_rag_agent/client.py "What is a Dedicated AI Cluster in OCI?"
+python simple_rag_agent/client.py "What are scaling laws for LLM?"
 ```
 
 Optional custom URL:
