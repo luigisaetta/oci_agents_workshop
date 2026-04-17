@@ -53,6 +53,14 @@ pip install pytest black pylint
 
 ### 4. Configure OCI authentication
 
+For simplicity, these examples use local OCI configuration with
+`auth_type="API_KEY"` (USER_PRINCIPAL).
+This means OCI credentials must be configured in:
+
+```text
+$HOME/.oci/config
+```
+
 Set up OCI API authentication by following the official guide:
 [Oracle Cloud Infrastructure SDK and CLI Configuration File](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/sdkconfig.htm).
 
