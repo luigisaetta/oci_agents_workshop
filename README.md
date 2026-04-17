@@ -8,14 +8,35 @@ A specific focus is included for DAC (Dedicated AI Cluster) based deployments an
 
 ## Quickstart
 
-### 1. Create and activate the Conda environment
+### 1. Set required IAM policies
+
+Before running the examples, create a dedicated compartment for this workshop and
+configure IAM policies for your user group.
+
+Policy to set in your tenancy:
+
+```text
+allow group <your-group-name> to manage generative-ai-family in compartment <your-compartment-name>
+```
+
+If you use a Dedicated AI Cluster (DAC) in a different compartment, set the same
+policy for the DAC compartment as well:
+
+```text
+allow group <your-group-name> to manage generative-ai-family in compartment <your-dac-compartment-name>
+```
+
+Reference:
+[OCI Generative AI IAM Policies](https://docs.oracle.com/en-us/iaas/Content/generative-ai/iam-policies.htm)
+
+### 2. Create and activate the Conda environment
 
 ```bash
 conda create -n oci_agents_workshop python=3.11 -y
 conda activate oci_agents_workshop
 ```
 
-### 2. Install required libraries
+### 3. Install required libraries
 
 For running the examples only:
 
@@ -29,12 +50,12 @@ If you are doing development in this repo and want to follow all repository conv
 pip install pytest black pylint
 ```
 
-### 3. Configure OCI authentication
+### 4. Configure OCI authentication
 
 Set up OCI API authentication by following the official guide:
 [Oracle Cloud Infrastructure SDK and CLI Configuration File](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/sdkconfig.htm).
 
-### 4. Configure environment variables
+### 5. Configure environment variables
 
 Copy the sample file and set real values:
 
@@ -51,7 +72,7 @@ Then edit `.env` and set at least:
 - `OCI_AUTH_TYPE`
 - `OCI_AUTH_PROFILE`
 
-### 5. Run the first configuration test (`test01.py`)
+### 6. Run the first configuration test (`test01.py`)
 
 ```bash
 python test01.py
@@ -60,7 +81,7 @@ python test01.py
 This is the first test to run after environment setup. If it prints the runtime
 configuration and returns a streamed response, your OCI configuration is working.
 
-### 6. Run other examples
+### 7. Run other examples
 
 ```bash
 python agent01.py "Explain what a Dedicated AI Cluster is in OCI."
