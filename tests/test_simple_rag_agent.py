@@ -14,6 +14,7 @@ from typing import Any
 from langchain_core.documents import Document
 
 from simple_rag_agent import rag_agent
+from simple_rag_agent.in_memory_vector_store import InMemoryVectorStore
 
 
 class _FakeEmbeddingClient:
@@ -59,7 +60,8 @@ def test_semantic_searcher_returns_top_documents(monkeypatch) -> None:
         Document(page_content="d3", metadata={"source": "c"}),
     ]
 
-    step = rag_agent.SemanticSearcher(base_documents=documents)
+    vector_store = InMemoryVectorStore(base_documents=documents, top_k=4)
+    step = rag_agent.SemanticSearcher(vector_store=vector_store)
     result = step.invoke({"user_input": "test query"})
 
     assert len(result["documents"]) == 3
@@ -81,7 +83,8 @@ def test_semantic_searcher_applies_top_k_filter(monkeypatch) -> None:
         for index in range(1, 7)
     ]
 
-    step = rag_agent.SemanticSearcher(base_documents=documents, top_k=4)
+    vector_store = InMemoryVectorStore(base_documents=documents, top_k=4)
+    step = rag_agent.SemanticSearcher(vector_store=vector_store)
     result = step.invoke({"user_input": "test query"})
 
     assert len(result["documents"]) == 4

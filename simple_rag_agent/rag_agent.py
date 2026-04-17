@@ -9,78 +9,16 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, Sequence, TypedDict
+from typing import Any, Dict, List, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnableSerializable
 from langgraph.graph import END, StateGraph
 
 from oci_models import build_embedding_client, build_llm
+from simple_rag_agent.in_memory_vector_store import InMemoryVectorStore
 from simple_rag_agent.prompts import build_answer_prompt
 from utils import collect_oci_runtime_config, extract_text
-
-DEFAULT_DOCUMENTS: Sequence[Document] = (
-    Document(
-        page_content=(
-            "OCI Generative AI provides foundation models and inference endpoints."
-        ),
-        metadata={"source": "doc-1"},
-    ),
-    Document(
-        page_content=(
-            "Dedicated AI Clusters can be used for enterprise-grade model serving in OCI."
-        ),
-        metadata={"source": "doc-2"},
-    ),
-    Document(
-        page_content=(
-            "LangChain and LangGraph can orchestrate multi-step AI workflows."
-        ),
-        metadata={"source": "doc-3"},
-    ),
-    Document(
-        page_content=(
-            "OCI Identity and Access Management controls access with groups and policies."
-        ),
-        metadata={"source": "doc-4"},
-    ),
-    Document(
-        page_content=(
-            "OCI Object Storage can be used to store unstructured data for AI workloads."
-        ),
-        metadata={"source": "doc-5"},
-    ),
-    Document(
-        page_content=(
-            "Retrieval-Augmented Generation combines retrieval with model generation."
-        ),
-        metadata={"source": "doc-6"},
-    ),
-    Document(
-        page_content=(
-            "Embeddings map text into vectors that can be compared by similarity."
-        ),
-        metadata={"source": "doc-7"},
-    ),
-    Document(
-        page_content=("FastAPI can expose AI workflows through simple HTTP endpoints."),
-        metadata={"source": "doc-8"},
-    ),
-    Document(
-        page_content=(
-            "Uvicorn is a common ASGI server used to run FastAPI applications."
-        ),
-        metadata={"source": "doc-9"},
-    ),
-    Document(
-        page_content=(
-            "A minimal RAG pipeline can be built with semantic search and answer generation."
-        ),
-        metadata={"source": "doc-10"},
-    ),
-)
-
-TOP_K_RESULTS = 4
 
 
 class RagState(TypedDict, total=False):
@@ -102,27 +40,15 @@ def _collect_rag_runtime_config() -> Dict[str, str]:
     return runtime_config
 
 
-def _cosine_similarity(vector_a: Sequence[float], vector_b: Sequence[float]) -> float:
-    """Compute cosine similarity between two vectors."""
-    numerator = sum(value_a * value_b for value_a, value_b in zip(vector_a, vector_b))
-    norm_a = sum(value * value for value in vector_a) ** 0.5
-    norm_b = sum(value * value for value in vector_b) ** 0.5
-    if norm_a == 0.0 or norm_b == 0.0:
-        return 0.0
-    return numerator / (norm_a * norm_b)
-
-
 # pylint: disable=too-few-public-methods
 class SemanticSearcher(RunnableSerializable[RagState, RagState]):
     """Step 1: retrieve most relevant documents with semantic similarity."""
 
     def __init__(
         self,
-        base_documents: Sequence[Document] = DEFAULT_DOCUMENTS,
-        top_k: int = TOP_K_RESULTS,
+        vector_store: InMemoryVectorStore | None = None,
     ) -> None:
-        self._base_documents = list(base_documents)
-        self._top_k = top_k
+        self._vector_store = vector_store or InMemoryVectorStore()
 
     def invoke(self, state: RagState, _config: Any = None, **_kwargs: Any) -> RagState:
         """Retrieve top relevant documents for the user request."""
@@ -131,18 +57,10 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
         runtime_config = _collect_rag_runtime_config()
         embedding_client = build_embedding_client(runtime_config)
 
-        query_vector = embedding_client.embed_query(state["user_input"])
-        doc_vectors = embedding_client.embed_documents(
-            [document.page_content for document in self._base_documents]
+        top_documents = self._vector_store.search(
+            query=state["user_input"],
+            embedding_client=embedding_client,
         )
-
-        ranked_pairs = []
-        for document, vector in zip(self._base_documents, doc_vectors, strict=True):
-            score = _cosine_similarity(query_vector, vector)
-            ranked_pairs.append((score, document))
-
-        ranked_pairs.sort(key=lambda item: item[0], reverse=True)
-        top_documents = [document for _, document in ranked_pairs[: self._top_k]]
 
         updated_state: RagState = dict(state)
         updated_state["runtime_config"] = runtime_config
