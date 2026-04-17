@@ -62,6 +62,7 @@ def test_semantic_searcher_returns_top_documents(monkeypatch) -> None:
     ]
 
     vector_store = InMemoryVectorStore(base_documents=documents, top_k=4)
+    vector_store.index(_FakeEmbeddingClient())
     step = rag_agent.SemanticSearcher(vector_store=vector_store)
     result = step.invoke({"user_input": "test query"})
 
@@ -85,6 +86,7 @@ def test_semantic_searcher_applies_top_k_filter(monkeypatch) -> None:
     ]
 
     vector_store = InMemoryVectorStore(base_documents=documents, top_k=4)
+    vector_store.index(_FakeEmbeddingClient())
     step = rag_agent.SemanticSearcher(vector_store=vector_store)
     result = step.invoke({"user_input": "test query"})
 

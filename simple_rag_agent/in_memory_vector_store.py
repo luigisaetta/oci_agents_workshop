@@ -39,16 +39,27 @@ class InMemoryVectorStore:
     ) -> None:
         self._base_documents = list(base_documents)
         self._top_k = top_k
+        self._indexed_documents: List[Document] = []
+        self._document_vectors: List[Sequence[float]] = []
+
+    def index(self, embedding_client: Any) -> None:
+        """Build in-memory vectors for all base documents."""
+        self._indexed_documents = list(self._base_documents)
+        self._document_vectors = embedding_client.embed_documents(
+            [document.page_content for document in self._indexed_documents]
+        )
 
     def search(self, query: str, embedding_client: Any) -> List[Document]:
         """Return top-k documents semantically closest to the query."""
+        if not self._indexed_documents or not self._document_vectors:
+            raise RuntimeError("Vector store is not indexed. Call index() first.")
+
         query_vector = embedding_client.embed_query(query)
-        doc_vectors = embedding_client.embed_documents(
-            [document.page_content for document in self._base_documents]
-        )
 
         ranked_pairs = []
-        for document, vector in zip(self._base_documents, doc_vectors, strict=True):
+        for document, vector in zip(
+            self._indexed_documents, self._document_vectors, strict=True
+        ):
             score = _cosine_similarity(query_vector, vector)
             ranked_pairs.append((score, document))
 

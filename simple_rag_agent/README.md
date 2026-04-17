@@ -10,6 +10,9 @@ The API returns a JSON payload with two fields:
 - `output`
 - `retrieved_docs`
 
+When the API starts, it loads the fake knowledge base and builds the in-memory
+vector index once. Query requests reuse this pre-indexed store.
+
 ## Requirements
 
 - OCI configuration in `$HOME/.oci/config`

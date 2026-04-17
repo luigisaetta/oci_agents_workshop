@@ -8,14 +8,15 @@ Description: FastAPI server exposing the simple RAG agent over HTTP.
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
-from simple_rag_agent.rag_agent import run_rag_agent
+from simple_rag_agent.rag_agent import build_initialized_vector_store, run_rag_agent
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
@@ -25,7 +26,15 @@ logging.basicConfig(
     force=True,
 )
 
-app = FastAPI(title="Simple RAG Agent API")
+
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    """Load and index the vector store once when API starts."""
+    app_instance.state.vector_store = build_initialized_vector_store()
+    yield
+
+
+app = FastAPI(title="Simple RAG Agent API", lifespan=lifespan)
 
 
 class InvokeRequest(BaseModel):
@@ -42,9 +51,12 @@ class InvokeResponse(BaseModel):
 
 
 @app.post("/invoke", response_model=InvokeResponse)
-def invoke_agent(payload: InvokeRequest) -> InvokeResponse:
+def invoke_agent(payload: InvokeRequest, request: Request) -> InvokeResponse:
     """Invoke the simple RAG agent and return its JSON output."""
-    result = run_rag_agent(payload.request)
+    result = run_rag_agent(
+        payload.request,
+        vector_store=request.app.state.vector_store,
+    )
     return InvokeResponse(
         output=result["output"],
         retrieved_docs=result["retrieved_docs"],

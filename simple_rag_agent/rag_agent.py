@@ -51,6 +51,19 @@ def _collect_rag_runtime_config() -> Dict[str, str]:
     return runtime_config
 
 
+def build_initialized_vector_store(
+    vector_store: InMemoryVectorStore | None = None,
+) -> InMemoryVectorStore:
+    """Create and index the vector store once using current runtime config."""
+    runtime_config = _collect_rag_runtime_config()
+    embedding_client = build_embedding_client(runtime_config)
+    top_k = int(runtime_config["SIMPLE_RAG_TOP_K"])
+
+    store = vector_store or InMemoryVectorStore(top_k=top_k)
+    store.index(embedding_client)
+    return store
+
+
 # pylint: disable=too-few-public-methods
 class SemanticSearcher(RunnableSerializable[RagState, RagState]):
     """Step 1: retrieve most relevant documents with semantic similarity."""
@@ -59,7 +72,7 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
         self,
         vector_store: InMemoryVectorStore | None = None,
     ) -> None:
-        self._vector_store = vector_store
+        self._vector_store = vector_store or build_initialized_vector_store()
 
     def invoke(self, state: RagState, _config: Any = None, **_kwargs: Any) -> RagState:
         """Retrieve top relevant documents for the user request."""
@@ -67,10 +80,7 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
 
         runtime_config = _collect_rag_runtime_config()
         embedding_client = build_embedding_client(runtime_config)
-        top_k = int(runtime_config["SIMPLE_RAG_TOP_K"])
-        vector_store = self._vector_store or InMemoryVectorStore(top_k=top_k)
-
-        top_documents = vector_store.search(
+        top_documents = self._vector_store.search(
             query=state["user_input"],
             embedding_client=embedding_client,
         )
@@ -110,10 +120,13 @@ class AnswerGenerator(RunnableSerializable[RagState, RagState]):
         return updated_state
 
 
-def build_rag_graph():
+def build_rag_graph(vector_store: InMemoryVectorStore | None = None):
     """Build and compile the simple two-step RAG graph."""
     graph_builder = StateGraph(RagState)
-    graph_builder.add_node("semantic_searcher", SemanticSearcher())
+    graph_builder.add_node(
+        "semantic_searcher",
+        SemanticSearcher(vector_store=vector_store),
+    )
     graph_builder.add_node("answer_generator", AnswerGenerator())
 
     graph_builder.set_entry_point("semantic_searcher")
@@ -123,10 +136,16 @@ def build_rag_graph():
     return graph_builder.compile()
 
 
-def run_rag_agent(user_input: str) -> Dict[str, Any]:
+def run_rag_agent(
+    user_input: str,
+    vector_store: InMemoryVectorStore | None = None,
+) -> Dict[str, Any]:
     """Run the simple RAG graph and return a JSON-compatible output."""
-    graph = build_rag_graph()
+    graph = build_rag_graph(vector_store=vector_store)
+
+    # here we call the agent
     result_state: RagState = graph.invoke({"user_input": user_input})
+
     return {
         "output": result_state["output"],
         "retrieved_docs": result_state["retrieved_docs"],
