@@ -38,7 +38,49 @@ DEFAULT_DOCUMENTS: Sequence[Document] = (
         ),
         metadata={"source": "doc-3"},
     ),
+    Document(
+        page_content=(
+            "OCI Identity and Access Management controls access with groups and policies."
+        ),
+        metadata={"source": "doc-4"},
+    ),
+    Document(
+        page_content=(
+            "OCI Object Storage can be used to store unstructured data for AI workloads."
+        ),
+        metadata={"source": "doc-5"},
+    ),
+    Document(
+        page_content=(
+            "Retrieval-Augmented Generation combines retrieval with model generation."
+        ),
+        metadata={"source": "doc-6"},
+    ),
+    Document(
+        page_content=(
+            "Embeddings map text into vectors that can be compared by similarity."
+        ),
+        metadata={"source": "doc-7"},
+    ),
+    Document(
+        page_content=("FastAPI can expose AI workflows through simple HTTP endpoints."),
+        metadata={"source": "doc-8"},
+    ),
+    Document(
+        page_content=(
+            "Uvicorn is a common ASGI server used to run FastAPI applications."
+        ),
+        metadata={"source": "doc-9"},
+    ),
+    Document(
+        page_content=(
+            "A minimal RAG pipeline can be built with semantic search and answer generation."
+        ),
+        metadata={"source": "doc-10"},
+    ),
 )
+
+TOP_K_RESULTS = 4
 
 
 class RagState(TypedDict, total=False):
@@ -77,8 +119,10 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
     def __init__(
         self,
         base_documents: Sequence[Document] = DEFAULT_DOCUMENTS,
+        top_k: int = TOP_K_RESULTS,
     ) -> None:
         self._base_documents = list(base_documents)
+        self._top_k = top_k
 
     def invoke(self, state: RagState, _config: Any = None, **_kwargs: Any) -> RagState:
         """Retrieve top relevant documents for the user request."""
@@ -98,7 +142,7 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
             ranked_pairs.append((score, document))
 
         ranked_pairs.sort(key=lambda item: item[0], reverse=True)
-        top_documents = [document for _, document in ranked_pairs[:3]]
+        top_documents = [document for _, document in ranked_pairs[: self._top_k]]
 
         updated_state: RagState = dict(state)
         updated_state["runtime_config"] = runtime_config

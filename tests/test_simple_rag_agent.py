@@ -27,12 +27,10 @@ class _FakeEmbeddingClient:
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Return deterministic vectors based on document index."""
-        vectors = [
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0],
-        ]
-        return vectors[: len(texts)]
+        vectors = []
+        for index, _ in enumerate(texts, start=1):
+            vectors.append([1.0 / index, 0.0, 0.0])
+        return vectors
 
 
 class _FakeLlm:
@@ -66,6 +64,28 @@ def test_semantic_searcher_returns_top_documents(monkeypatch) -> None:
 
     assert len(result["documents"]) == 3
     assert result["documents"][0].page_content == "d1"
+
+
+def test_semantic_searcher_applies_top_k_filter(monkeypatch) -> None:
+    """It should limit retrieved documents to the configured top_k value."""
+    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
+    monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
+    monkeypatch.setattr(
+        rag_agent,
+        "build_embedding_client",
+        lambda _runtime_config: _FakeEmbeddingClient(),
+    )
+
+    documents = [
+        Document(page_content=f"doc-{index}", metadata={"source": f"s-{index}"})
+        for index in range(1, 7)
+    ]
+
+    step = rag_agent.SemanticSearcher(base_documents=documents, top_k=4)
+    result = step.invoke({"user_input": "test query"})
+
+    assert len(result["documents"]) == 4
+    assert result["documents"][0].page_content == "doc-1"
 
 
 def test_answer_generator_returns_output(monkeypatch) -> None:
