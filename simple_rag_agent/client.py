@@ -12,6 +12,33 @@ import json
 from urllib import request
 
 
+def format_response(response_payload: dict) -> str:
+    """Build a readable CLI output from API JSON response."""
+    output_text = str(response_payload.get("output", "")).strip()
+    retrieved_docs = response_payload.get("retrieved_docs", [])
+
+    lines = [
+        "=== Simple RAG Response ===",
+        "",
+        "Answer:",
+        output_text or "(empty)",
+        "",
+        "Retrieved Documents:",
+    ]
+
+    if not retrieved_docs:
+        lines.append("- none")
+        return "\n".join(lines)
+
+    for index, item in enumerate(retrieved_docs, start=1):
+        source = str(item.get("source", "unknown"))
+        text = str(item.get("text", "")).strip()
+        preview = text if len(text) <= 140 else f"{text[:137]}..."
+        lines.append(f"{index}. [{source}] {preview}")
+
+    return "\n".join(lines)
+
+
 def main() -> None:
     """Read user request from CLI and call the RAG API."""
     parser = argparse.ArgumentParser(description="Simple RAG API client.")
@@ -35,7 +62,8 @@ def main() -> None:
     with request.urlopen(http_request, timeout=120) as response:  # nosec B310
         body = response.read().decode("utf-8")
 
-    print(body)
+    response_payload = json.loads(body)
+    print(format_response(response_payload))
 
 
 if __name__ == "__main__":
