@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from langchain_core.documents import Document
+import pytest
 
 from simple_rag_agent import rag_agent
 from simple_rag_agent.in_memory_vector_store import InMemoryVectorStore
@@ -91,6 +92,23 @@ def test_semantic_searcher_applies_top_k_filter(monkeypatch) -> None:
     assert result["documents"][0].page_content == "doc-1"
 
 
+def test_semantic_searcher_uses_top_k_from_env(monkeypatch) -> None:
+    """It should use SIMPLE_RAG_TOP_K when default vector store is used."""
+    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
+    monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
+    monkeypatch.setenv("SIMPLE_RAG_TOP_K", "2")
+    monkeypatch.setattr(
+        rag_agent,
+        "build_embedding_client",
+        lambda _runtime_config: _FakeEmbeddingClient(),
+    )
+
+    step = rag_agent.SemanticSearcher()
+    result = step.invoke({"user_input": "test query"})
+
+    assert len(result["documents"]) == 2
+
+
 def test_answer_generator_returns_output(monkeypatch) -> None:
     """It should create output text from retrieved documents."""
     monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
@@ -109,12 +127,14 @@ def test_answer_generator_returns_output(monkeypatch) -> None:
 
     result = step.invoke(state)
     assert result["output"] == "fake answer"
+    assert result["retrieved_docs"] == [{"source": "x", "text": "OCI info"}]
 
 
 def test_run_rag_agent_returns_json_output(monkeypatch) -> None:
     """It should run the graph and return output in JSON-compatible format."""
     monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
     monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
+    monkeypatch.setenv("SIMPLE_RAG_TOP_K", "2")
     monkeypatch.setattr(
         rag_agent,
         "build_embedding_client",
@@ -128,4 +148,22 @@ def test_run_rag_agent_returns_json_output(monkeypatch) -> None:
 
     result = rag_agent.run_rag_agent("Explain DAC")
 
-    assert result == {"output": "fake answer"}
+    assert result["output"] == "fake answer"
+    assert len(result["retrieved_docs"]) == 2
+
+
+def test_collect_rag_runtime_config_requires_positive_integer_top_k(
+    monkeypatch,
+) -> None:
+    """It should fail when SIMPLE_RAG_TOP_K is not a positive integer."""
+    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
+    monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
+    monkeypatch.setenv("SIMPLE_RAG_TOP_K", "zero")
+    monkeypatch.setattr(
+        rag_agent,
+        "build_embedding_client",
+        lambda _runtime_config: _FakeEmbeddingClient(),
+    )
+
+    with pytest.raises(ValueError, match="SIMPLE_RAG_TOP_K"):
+        rag_agent.SemanticSearcher().invoke({"user_input": "test query"})

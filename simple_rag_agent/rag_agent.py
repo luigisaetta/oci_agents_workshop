@@ -27,16 +27,27 @@ class RagState(TypedDict, total=False):
     user_input: str
     runtime_config: Dict[str, str]
     documents: List[Document]
+    retrieved_docs: List[Dict[str, str]]
     output: str
 
 
 def _collect_rag_runtime_config() -> Dict[str, str]:
-    """Collect runtime config and require OCI_EMBED_MODEL_ID."""
+    """Collect runtime config and require simple RAG specific variables."""
     runtime_config = collect_oci_runtime_config()
     embed_model_id = os.getenv("OCI_EMBED_MODEL_ID", "").strip()
     if not embed_model_id:
         raise ValueError("Set OCI_EMBED_MODEL_ID environment variable.")
+
+    top_k_raw = os.getenv("SIMPLE_RAG_TOP_K", "4").strip()
+    try:
+        top_k = int(top_k_raw)
+    except ValueError as error:
+        raise ValueError("Set SIMPLE_RAG_TOP_K as a positive integer.") from error
+    if top_k < 1:
+        raise ValueError("Set SIMPLE_RAG_TOP_K as a positive integer.")
+
     runtime_config["OCI_EMBED_MODEL_ID"] = embed_model_id
+    runtime_config["SIMPLE_RAG_TOP_K"] = str(top_k)
     return runtime_config
 
 
@@ -48,7 +59,7 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
         self,
         vector_store: InMemoryVectorStore | None = None,
     ) -> None:
-        self._vector_store = vector_store or InMemoryVectorStore()
+        self._vector_store = vector_store
 
     def invoke(self, state: RagState, _config: Any = None, **_kwargs: Any) -> RagState:
         """Retrieve top relevant documents for the user request."""
@@ -56,8 +67,10 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
 
         runtime_config = _collect_rag_runtime_config()
         embedding_client = build_embedding_client(runtime_config)
+        top_k = int(runtime_config["SIMPLE_RAG_TOP_K"])
+        vector_store = self._vector_store or InMemoryVectorStore(top_k=top_k)
 
-        top_documents = self._vector_store.search(
+        top_documents = vector_store.search(
             query=state["user_input"],
             embedding_client=embedding_client,
         )
@@ -84,9 +97,14 @@ class AnswerGenerator(RunnableSerializable[RagState, RagState]):
         context = "\n\n".join(document.page_content for document in state["documents"])
         prompt = build_answer_prompt(user_input=state["user_input"], context=context)
         response = llm.invoke(prompt)
+        retrieved_docs = []
+        for document in state["documents"]:
+            source = str(document.metadata.get("source", "unknown"))
+            retrieved_docs.append({"source": source, "text": document.page_content})
 
         updated_state: RagState = dict(state)
         updated_state["output"] = extract_text(response)
+        updated_state["retrieved_docs"] = retrieved_docs
 
         logging.info("END AnswerGenerator")
         return updated_state
@@ -105,8 +123,11 @@ def build_rag_graph():
     return graph_builder.compile()
 
 
-def run_rag_agent(user_input: str) -> Dict[str, str]:
+def run_rag_agent(user_input: str) -> Dict[str, Any]:
     """Run the simple RAG graph and return a JSON-compatible output."""
     graph = build_rag_graph()
     result_state: RagState = graph.invoke({"user_input": user_input})
-    return {"output": result_state["output"]}
+    return {
+        "output": result_state["output"],
+        "retrieved_docs": result_state["retrieved_docs"],
+    }

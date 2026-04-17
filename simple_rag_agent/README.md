@@ -5,13 +5,17 @@ This folder contains a minimal LangGraph RAG example with two Runnable steps:
 - `SemanticSearcher`
 - `AnswerGenerator`
 
-The API returns a JSON payload with one field: `output`.
+The API returns a JSON payload with two fields:
+
+- `output`
+- `retrieved_docs`
 
 ## Requirements
 
 - OCI configuration in `$HOME/.oci/config`
 - `.env` file in project root
 - `OCI_EMBED_MODEL_ID` set in `.env`
+- `SIMPLE_RAG_TOP_K` set in `.env` (optional, default is `4`)
 
 ## Run the API server
 

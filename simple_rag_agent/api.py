@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import List
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -37,10 +38,14 @@ class InvokeResponse(BaseModel):
     """Output payload for RAG invocation."""
 
     output: str
+    retrieved_docs: List[dict[str, str]]
 
 
 @app.post("/invoke", response_model=InvokeResponse)
 def invoke_agent(payload: InvokeRequest) -> InvokeResponse:
     """Invoke the simple RAG agent and return its JSON output."""
     result = run_rag_agent(payload.request)
-    return InvokeResponse(output=result["output"])
+    return InvokeResponse(
+        output=result["output"],
+        retrieved_docs=result["retrieved_docs"],
+    )
