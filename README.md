@@ -17,8 +17,16 @@ conda activate agent_workshop
 
 ### 2. Install required libraries
 
+For running the examples only:
+
 ```bash
-pip install langchain langgraph langchain-oci python-dotenv pytest black pylint
+pip install langchain langgraph langchain-oci python-dotenv
+```
+
+If you are doing development in this repo and want to follow all repository conventions, also install:
+
+```bash
+pip install pytest black pylint
 ```
 
 ### 3. Configure OCI authentication
