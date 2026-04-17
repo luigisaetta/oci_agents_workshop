@@ -55,12 +55,15 @@ def build_initialized_vector_store(
     vector_store: InMemoryVectorStore | None = None,
 ) -> InMemoryVectorStore:
     """Create and index the vector store once using current runtime config."""
+    logging.info("START VectorStoreLoadingAndIndexing")
     runtime_config = _collect_rag_runtime_config()
     embedding_client = build_embedding_client(runtime_config)
     top_k = int(runtime_config["SIMPLE_RAG_TOP_K"])
 
     store = vector_store or InMemoryVectorStore(top_k=top_k)
-    store.index(embedding_client)
+    loaded_documents = store.index(embedding_client)
+    logging.info("Loaded documents: %s", loaded_documents)
+    logging.info("END VectorStoreLoadingAndIndexing")
     return store
 
 

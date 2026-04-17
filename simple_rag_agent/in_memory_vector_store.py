@@ -42,12 +42,13 @@ class InMemoryVectorStore:
         self._indexed_documents: List[Document] = []
         self._document_vectors: List[Sequence[float]] = []
 
-    def index(self, embedding_client: Any) -> None:
+    def index(self, embedding_client: Any) -> int:
         """Build in-memory vectors for all base documents."""
         self._indexed_documents = list(self._base_documents)
         self._document_vectors = embedding_client.embed_documents(
             [document.page_content for document in self._indexed_documents]
         )
+        return len(self._indexed_documents)
 
     def search(self, query: str, embedding_client: Any) -> List[Document]:
         """Return top-k documents semantically closest to the query."""
