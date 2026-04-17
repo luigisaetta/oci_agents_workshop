@@ -32,9 +32,9 @@ def format_response(response_payload: dict) -> str:
 
     for index, item in enumerate(retrieved_docs, start=1):
         source = str(item.get("source", "unknown"))
-        text = str(item.get("text", "")).strip()
-        preview = text if len(text) <= 140 else f"{text[:137]}..."
-        lines.append(f"{index}. [{source}] {preview}")
+        title = str(item.get("title", "n/a"))
+        page = item.get("page", "n/a")
+        lines.append(f"{index}. [{source}] title={title}, page={page}")
 
     return "\n".join(lines)
 
