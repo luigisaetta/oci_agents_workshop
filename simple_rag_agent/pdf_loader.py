@@ -147,14 +147,3 @@ def build_pdf_vector_store(
     logging.info("Loaded documents: %s", loaded_documents)
     logging.info("END PdfLoadingAndIndexing")
     return vector_store
-
-
-def main() -> None:
-    """Run PDF loading and embedding pipeline from project root input_pdf directory."""
-    input_dir = Path(__file__).resolve().parent.parent / "input_pdf"
-    vector_store = build_pdf_vector_store(input_dir=input_dir)
-    print(f"Indexed chunks: {vector_store.indexed_count}")
-
-
-if __name__ == "__main__":
-    main()

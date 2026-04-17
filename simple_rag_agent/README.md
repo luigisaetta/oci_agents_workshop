@@ -30,17 +30,6 @@ The loader script uses:
 - `chunk_size=800`
 - `chunk_overlap=200`
 
-## Build PDF Chunks And Embeddings
-
-From project root:
-
-```bash
-python simple_rag_agent/pdf_loader.py
-```
-
-If `input_pdf/` contains PDF files, API startup will load and index those chunks.
-If no PDF is found, the API falls back to the fake knowledge base.
-
 ## Run the API server
 
 From project root:
@@ -48,6 +37,9 @@ From project root:
 ```bash
 uvicorn simple_rag_agent.api:app --host 127.0.0.1 --port 8000 --reload
 ```
+
+Before starting the API, put your PDF files into `input_pdf/`.
+If no PDF is found, the API falls back to the fake knowledge base.
 
 ## Run the client
 
