@@ -11,8 +11,8 @@ A specific focus is included for DAC (Dedicated AI Cluster) based deployments an
 ### 1. Create and activate the Conda environment
 
 ```bash
-conda create -n agent_workshop python=3.11 -y
-conda activate agent_workshop
+conda create -n oci_agents_workshop python=3.11 -y
+conda activate oci_agents_workshop
 ```
 
 ### 2. Install required libraries

@@ -6,7 +6,7 @@ These instructions apply to all future code changes in this repository.
 
 1. Keep generated code as simple as possible.
 2. Keep all code, prompts, comments, and messages in English.
-3. When necessary, use the conda environment `custom_rag_agent2026`.
+3. When necessary, use the conda environment `oci_agents_workshop`.
 4. For significant code changes, always generate tests using `pytest`.
 5. Store tests in the `tests` folder and ensure they are executable from the project root.
 6. After significant code changes, run the test suite with `pytest` from the project root.
