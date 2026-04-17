@@ -23,6 +23,9 @@ pip install langchain langgraph langchain-oci python-dotenv pytest black pylint
 
 ### 3. Configure environment variables
 
+Before configuring `.env`, set up OCI API authentication by following the official guide:
+[Oracle Cloud Infrastructure SDK and CLI Configuration File](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/sdkconfig.htm).
+
 Copy the sample file and set real values:
 
 ```bash
