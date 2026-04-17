@@ -27,7 +27,7 @@ class RagState(TypedDict, total=False):
     user_input: str
     runtime_config: Dict[str, str]
     documents: List[Document]
-    retrieved_docs: List[Dict[str, str]]
+    retrieved_docs: List[Dict[str, Any]]
     output: str
 
 
@@ -110,10 +110,9 @@ class AnswerGenerator(RunnableSerializable[RagState, RagState]):
         context = "\n\n".join(document.page_content for document in state["documents"])
         prompt = build_answer_prompt(user_input=state["user_input"], context=context)
         response = llm.invoke(prompt)
-        retrieved_docs = []
+        retrieved_docs: List[Dict[str, Any]] = []
         for document in state["documents"]:
-            source = str(document.metadata.get("source", "unknown"))
-            retrieved_docs.append({"source": source, "text": document.page_content})
+            retrieved_docs.append(dict(document.metadata))
 
         updated_state: RagState = dict(state)
         updated_state["output"] = extract_text(response)

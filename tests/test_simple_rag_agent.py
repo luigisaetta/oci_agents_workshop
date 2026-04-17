@@ -129,7 +129,7 @@ def test_answer_generator_returns_output(monkeypatch) -> None:
 
     result = step.invoke(state)
     assert result["output"] == "fake answer"
-    assert result["retrieved_docs"] == [{"source": "x", "text": "OCI info"}]
+    assert result["retrieved_docs"] == [{"source": "x"}]
 
 
 def test_run_rag_agent_returns_json_output(monkeypatch) -> None:

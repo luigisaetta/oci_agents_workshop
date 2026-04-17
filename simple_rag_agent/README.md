@@ -8,7 +8,7 @@ This folder contains a minimal LangGraph RAG example with two Runnable steps:
 The API returns a JSON payload with two fields:
 
 - `output`
-- `retrieved_docs`
+- `retrieved_docs` (metadata only, without chunk text)
 
 When the API starts, it loads and indexes PDF chunks from `input_pdf/` when
 available. If no PDF files are present, it falls back to the fake knowledge

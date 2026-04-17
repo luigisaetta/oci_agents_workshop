@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
@@ -55,7 +55,7 @@ class InvokeResponse(BaseModel):
     """Output payload for RAG invocation."""
 
     output: str
-    retrieved_docs: List[dict[str, str]]
+    retrieved_docs: List[dict[str, Any]]
 
 
 @app.post("/invoke", response_model=InvokeResponse)

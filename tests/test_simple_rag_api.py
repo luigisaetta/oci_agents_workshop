@@ -19,7 +19,7 @@ def _fake_run_rag_agent(_request: str, vector_store=None) -> dict:
     del vector_store
     return {
         "output": "api answer",
-        "retrieved_docs": [{"source": "doc-1", "text": "context"}],
+        "retrieved_docs": [{"source": "doc-1", "title": "Doc 1", "page": 1}],
     }
 
 
@@ -33,8 +33,14 @@ def _fake_list_pdf_files(_input_dir: Path) -> list[Path]:
     return [Path("dummy.pdf")]
 
 
+def _fake_list_no_pdf_files(_input_dir: Path) -> list[Path]:
+    """Return an empty list to force fake knowledge base startup path."""
+    return []
+
+
 def test_invoke_endpoint_returns_output(monkeypatch) -> None:
     """It should return the JSON output produced by the RAG agent."""
+    monkeypatch.setattr("simple_rag_agent.api.list_pdf_files", _fake_list_no_pdf_files)
     monkeypatch.setattr(
         "simple_rag_agent.api.build_initialized_vector_store",
         _fake_build_initialized_vector_store,
@@ -50,7 +56,7 @@ def test_invoke_endpoint_returns_output(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "output": "api answer",
-        "retrieved_docs": [{"source": "doc-1", "text": "context"}],
+        "retrieved_docs": [{"source": "doc-1", "title": "Doc 1", "page": 1}],
     }
 
 

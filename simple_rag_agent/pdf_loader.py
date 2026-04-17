@@ -7,10 +7,12 @@ Description: Load PDFs from input_pdf, chunk text, and build embeddings for simp
 
 from __future__ import annotations
 
+# pylint: disable=duplicate-code
+
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence
 
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -33,36 +35,42 @@ def list_pdf_files(input_dir: Path) -> List[Path]:
     return sorted(path for path in input_dir.glob("*.pdf") if path.is_file())
 
 
-def build_documents_from_texts(
-    pdf_text_items: Sequence[Tuple[str, str]],
-) -> List[Document]:
-    """Build LangChain documents from pairs of source name and text."""
-    documents: List[Document] = []
-    for source_name, text in pdf_text_items:
-        normalized_text = text.strip()
-        if not normalized_text:
-            continue
-        documents.append(
-            Document(page_content=normalized_text, metadata={"source": source_name})
-        )
-    return documents
+def _resolve_pdf_title(reader: PdfReader, pdf_path: Path) -> str:
+    """Resolve a readable title from PDF metadata with filename fallback."""
+    metadata = reader.metadata
+    if metadata and metadata.title:
+        return str(metadata.title).strip() or pdf_path.stem
+    return pdf_path.stem
 
 
 def load_pdf_documents(input_dir: Path) -> List[Document]:
-    """Read all PDFs from input_dir and return one raw document per PDF."""
+    """Read all PDFs from input_dir and return one raw document per page."""
     pdf_paths = list_pdf_files(input_dir)
     if not pdf_paths:
         raise ValueError(f"No PDF files found in {input_dir}.")
 
-    pdf_text_items: List[Tuple[str, str]] = []
+    documents: List[Document] = []
     for pdf_path in pdf_paths:
         reader = PdfReader(str(pdf_path))
-        page_texts: List[str] = []
-        for page in reader.pages:
-            page_texts.append(page.extract_text() or "")
-        pdf_text_items.append((pdf_path.name, "\n".join(page_texts)))
+        title = _resolve_pdf_title(reader, pdf_path)
+        for page_number, page in enumerate(reader.pages, start=1):
+            page_text = (page.extract_text() or "").strip()
+            if not page_text:
+                continue
+            documents.append(
+                Document(
+                    page_content=page_text,
+                    metadata={
+                        "source": pdf_path.name,
+                        "title": title,
+                        "page": page_number,
+                    },
+                )
+            )
 
-    return build_documents_from_texts(pdf_text_items)
+    if not documents:
+        raise ValueError(f"No extractable text found in PDF files in {input_dir}.")
+    return documents
 
 
 def chunk_documents(
