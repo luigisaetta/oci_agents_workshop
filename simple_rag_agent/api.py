@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
+from simple_rag_agent.pdf_loader import build_pdf_vector_store, list_pdf_files
 from simple_rag_agent.rag_agent import build_initialized_vector_store, run_rag_agent
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
@@ -30,7 +31,14 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
     """Load and index the vector store once when API starts."""
-    app_instance.state.vector_store = build_initialized_vector_store()
+    input_dir = Path(__file__).resolve().parent.parent / "input_pdf"
+    pdf_files = list_pdf_files(input_dir)
+
+    if pdf_files:
+        app_instance.state.vector_store = build_pdf_vector_store(input_dir=input_dir)
+    else:
+        app_instance.state.vector_store = build_initialized_vector_store()
+
     yield
 
 

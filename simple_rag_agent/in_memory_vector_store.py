@@ -50,6 +50,24 @@ class InMemoryVectorStore:
         )
         return len(self._indexed_documents)
 
+    def set_index(
+        self,
+        indexed_documents: Sequence[Document],
+        document_vectors: Sequence[Sequence[float]],
+    ) -> int:
+        """Set precomputed documents and vectors as the active index."""
+        if len(indexed_documents) != len(document_vectors):
+            raise ValueError("Documents and vectors must have the same length.")
+
+        self._indexed_documents = list(indexed_documents)
+        self._document_vectors = list(document_vectors)
+        return len(self._indexed_documents)
+
+    @property
+    def indexed_count(self) -> int:
+        """Return number of indexed documents available for search."""
+        return len(self._indexed_documents)
+
     def search(self, query: str, embedding_client: Any) -> List[Document]:
         """Return top-k documents semantically closest to the query."""
         if not self._indexed_documents or not self._document_vectors:

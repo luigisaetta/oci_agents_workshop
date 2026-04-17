@@ -10,8 +10,9 @@ The API returns a JSON payload with two fields:
 - `output`
 - `retrieved_docs`
 
-When the API starts, it loads the fake knowledge base and builds the in-memory
-vector index once. Query requests reuse this pre-indexed store.
+When the API starts, it loads and indexes PDF chunks from `input_pdf/` when
+available. If no PDF files are present, it falls back to the fake knowledge
+base. Query requests reuse this pre-indexed store.
 
 ## Requirements
 
@@ -20,7 +21,25 @@ vector index once. Query requests reuse this pre-indexed store.
 - `OCI_EMBED_MODEL_ID` set in `.env`
 - `SIMPLE_RAG_TOP_K` set in `.env` (optional, default is `4`)
 - `pypdf` installed in your Python environment
+- `langchain-text-splitters` installed for chunking
+- `tqdm` installed for embedding progress bar
 - `input_pdf/` folder under project root for source PDF files
+
+The loader script uses:
+
+- `chunk_size=800`
+- `chunk_overlap=200`
+
+## Build PDF Chunks And Embeddings
+
+From project root:
+
+```bash
+python simple_rag_agent/pdf_loader.py
+```
+
+If `input_pdf/` contains PDF files, API startup will load and index those chunks.
+If no PDF is found, the API falls back to the fake knowledge base.
 
 ## Run the API server
 
