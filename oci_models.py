@@ -7,9 +7,9 @@ Description: OCI model builders used by local agents.
 
 from __future__ import annotations
 
-from typing import Dict
+from typing import Any, Dict
 
-from langchain_oci import ChatOCIGenAI
+from langchain_oci import ChatOCIGenAI, OCIGenAIEmbeddings
 
 
 def build_llm(runtime_config: Dict[str, str]) -> ChatOCIGenAI:
@@ -22,4 +22,15 @@ def build_llm(runtime_config: Dict[str, str]) -> ChatOCIGenAI:
         auth_type=runtime_config["OCI_AUTH_TYPE"],
         auth_profile=runtime_config["OCI_AUTH_PROFILE"],
         model_kwargs={"temperature": 0.0, "max_tokens": 4192},
+    )
+
+
+def build_embedding_client(runtime_config: Dict[str, str]) -> Any:
+    """Create an OCIGenAIEmbeddings instance from runtime config."""
+    return OCIGenAIEmbeddings(
+        model_id=runtime_config["OCI_EMBED_MODEL_ID"],
+        service_endpoint=runtime_config["OCI_SERVICE_ENDPOINT"],
+        compartment_id=runtime_config["OCI_COMPARTMENT_ID"],
+        auth_type=runtime_config["OCI_AUTH_TYPE"],
+        auth_profile=runtime_config["OCI_AUTH_PROFILE"],
     )

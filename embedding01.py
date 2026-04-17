@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Sequence
 
 from dotenv import load_dotenv
 
+from oci_models import build_embedding_client
 from utils import collect_oci_runtime_config, print_oci_runtime_config
 
 
@@ -26,20 +27,6 @@ def build_embedding_runtime_config() -> Dict[str, str]:
 
     runtime_config["OCI_EMBED_MODEL_ID"] = embed_model_id
     return runtime_config
-
-
-def build_embedding_client(runtime_config: Dict[str, str]) -> Any:
-    """Create an OCIGenAIEmbeddings client from runtime config."""
-    # pylint: disable=import-outside-toplevel
-    from langchain_oci import OCIGenAIEmbeddings
-
-    return OCIGenAIEmbeddings(
-        model_id=runtime_config["OCI_EMBED_MODEL_ID"],
-        service_endpoint=runtime_config["OCI_SERVICE_ENDPOINT"],
-        compartment_id=runtime_config["OCI_COMPARTMENT_ID"],
-        auth_type=runtime_config["OCI_AUTH_TYPE"],
-        auth_profile=runtime_config["OCI_AUTH_PROFILE"],
-    )
 
 
 def generate_embeddings(
