@@ -21,10 +21,12 @@ conda activate agent_workshop
 pip install langchain langgraph langchain-oci python-dotenv pytest black pylint
 ```
 
-### 3. Configure environment variables
+### 3. Configure OCI authentication
 
-Before configuring `.env`, set up OCI API authentication by following the official guide:
+Set up OCI API authentication by following the official guide:
 [Oracle Cloud Infrastructure SDK and CLI Configuration File](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/sdkconfig.htm).
+
+### 4. Configure environment variables
 
 Copy the sample file and set real values:
 
@@ -41,7 +43,7 @@ Then edit `.env` and set at least:
 - `OCI_AUTH_TYPE`
 - `OCI_AUTH_PROFILE`
 
-### 4. Run an example
+### 5. Run an example
 
 ```bash
 python agent01.py "Explain what a Dedicated AI Cluster is in OCI."
