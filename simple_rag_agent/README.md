@@ -19,6 +19,8 @@ vector index once. Query requests reuse this pre-indexed store.
 - `.env` file in project root
 - `OCI_EMBED_MODEL_ID` set in `.env`
 - `SIMPLE_RAG_TOP_K` set in `.env` (optional, default is `4`)
+- `pypdf` installed in your Python environment
+- `input_pdf/` folder under project root for source PDF files
 
 ## Run the API server
 
