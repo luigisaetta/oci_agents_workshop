@@ -51,7 +51,16 @@ Then edit `.env` and set at least:
 - `OCI_AUTH_TYPE`
 - `OCI_AUTH_PROFILE`
 
-### 5. Run an example
+### 5. Run the first configuration test (`test01.py`)
+
+```bash
+python test01.py
+```
+
+This is the first test to run after environment setup. If it prints the runtime
+configuration and returns a streamed response, your OCI configuration is working.
+
+### 6. Run other examples
 
 ```bash
 python agent01.py "Explain what a Dedicated AI Cluster is in OCI."
