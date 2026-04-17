@@ -12,6 +12,7 @@ A specific focus is included for DAC (Dedicated AI Cluster) based deployments an
 
 Before running the examples, create a dedicated compartment for this workshop and
 configure IAM policies for your user group.
+These policies must be set by a Tenant Admin.
 
 Policy to set in your tenancy:
 
