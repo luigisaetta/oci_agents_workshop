@@ -11,11 +11,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.documents import Document
 import pytest
+from langchain_core.documents import Document
 
 from simple_rag_agent import rag_agent
-from simple_rag_agent.in_memory_vector_store import InMemoryVectorStore
 
 
 class _FakeEmbeddingClient:
@@ -45,15 +44,23 @@ class _FakeLlm:
         return "fake answer"
 
 
+class _FakeVectorStore:
+    """Minimal vector store implementing only similarity_search."""
+
+    def __init__(self, docs: list[Document]) -> None:
+        self._docs = docs
+
+    def similarity_search(
+        self, _query: str, k: int = 4, **_kwargs: Any
+    ) -> list[Document]:
+        """Return first k documents in deterministic order."""
+        return self._docs[:k]
+
+
 def test_semantic_searcher_returns_top_documents(monkeypatch) -> None:
     """It should return ranked documents from semantic search."""
     monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
     monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
-    monkeypatch.setattr(
-        rag_agent,
-        "build_embedding_client",
-        lambda _runtime_config: _FakeEmbeddingClient(),
-    )
 
     documents = [
         Document(page_content="d1", metadata={"source": "a"}),
@@ -61,9 +68,7 @@ def test_semantic_searcher_returns_top_documents(monkeypatch) -> None:
         Document(page_content="d3", metadata={"source": "c"}),
     ]
 
-    vector_store = InMemoryVectorStore(base_documents=documents, top_k=4)
-    vector_store.index(_FakeEmbeddingClient())
-    step = rag_agent.SemanticSearcher(vector_store=vector_store)
+    step = rag_agent.SemanticSearcher(vector_store=_FakeVectorStore(documents))
     result = step.invoke({"user_input": "test query"})
 
     assert len(result["documents"]) == 3
@@ -74,41 +79,18 @@ def test_semantic_searcher_applies_top_k_filter(monkeypatch) -> None:
     """It should limit retrieved documents to the configured top_k value."""
     monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
     monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
-    monkeypatch.setattr(
-        rag_agent,
-        "build_embedding_client",
-        lambda _runtime_config: _FakeEmbeddingClient(),
-    )
+    monkeypatch.setenv("SIMPLE_RAG_TOP_K", "2")
 
     documents = [
         Document(page_content=f"doc-{index}", metadata={"source": f"s-{index}"})
         for index in range(1, 7)
     ]
 
-    vector_store = InMemoryVectorStore(base_documents=documents, top_k=4)
-    vector_store.index(_FakeEmbeddingClient())
-    step = rag_agent.SemanticSearcher(vector_store=vector_store)
-    result = step.invoke({"user_input": "test query"})
-
-    assert len(result["documents"]) == 4
-    assert result["documents"][0].page_content == "doc-1"
-
-
-def test_semantic_searcher_uses_top_k_from_env(monkeypatch) -> None:
-    """It should use SIMPLE_RAG_TOP_K when default vector store is used."""
-    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
-    monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
-    monkeypatch.setenv("SIMPLE_RAG_TOP_K", "2")
-    monkeypatch.setattr(
-        rag_agent,
-        "build_embedding_client",
-        lambda _runtime_config: _FakeEmbeddingClient(),
-    )
-
-    step = rag_agent.SemanticSearcher()
+    step = rag_agent.SemanticSearcher(vector_store=_FakeVectorStore(documents))
     result = step.invoke({"user_input": "test query"})
 
     assert len(result["documents"]) == 2
+    assert result["documents"][0].page_content == "doc-1"
 
 
 def test_answer_generator_returns_output(monkeypatch) -> None:
@@ -161,11 +143,8 @@ def test_collect_rag_runtime_config_requires_positive_integer_top_k(
     monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
     monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
     monkeypatch.setenv("SIMPLE_RAG_TOP_K", "zero")
-    monkeypatch.setattr(
-        rag_agent,
-        "build_embedding_client",
-        lambda _runtime_config: _FakeEmbeddingClient(),
-    )
 
     with pytest.raises(ValueError, match="SIMPLE_RAG_TOP_K"):
-        rag_agent.SemanticSearcher().invoke({"user_input": "test query"})
+        rag_agent.SemanticSearcher(vector_store=_FakeVectorStore([])).invoke(
+            {"user_input": "test query"}
+        )

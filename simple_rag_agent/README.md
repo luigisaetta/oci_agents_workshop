@@ -23,6 +23,7 @@ base. Query requests reuse this pre-indexed store.
 - `pypdf` installed in your Python environment
 - `langchain-text-splitters` installed for chunking
 - `tqdm` installed for embedding progress bar
+- `numpy` installed (required by LangChain `InMemoryVectorStore` similarity search)
 - `input_pdf/` folder under project root for source PDF files
 
 The loader script uses:

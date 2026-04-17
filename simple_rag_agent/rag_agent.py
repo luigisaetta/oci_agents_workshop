@@ -13,10 +13,11 @@ from typing import Any, Dict, List, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnableSerializable
+from langchain_core.vectorstores import InMemoryVectorStore
 from langgraph.graph import END, StateGraph
 
 from oci_models import build_embedding_client, build_llm
-from simple_rag_agent.in_memory_vector_store import InMemoryVectorStore
+from simple_rag_agent.fake_knowledge_base import build_fake_documents
 from simple_rag_agent.prompts import build_answer_prompt
 from utils import collect_oci_runtime_config, extract_text
 
@@ -58,10 +59,11 @@ def build_initialized_vector_store(
     logging.info("START VectorStoreLoadingAndIndexing")
     runtime_config = _collect_rag_runtime_config()
     embedding_client = build_embedding_client(runtime_config)
-    top_k = int(runtime_config["SIMPLE_RAG_TOP_K"])
+    base_documents = build_fake_documents()
 
-    store = vector_store or InMemoryVectorStore(top_k=top_k)
-    loaded_documents = store.index(embedding_client)
+    store = vector_store or InMemoryVectorStore(embedding=embedding_client)
+    store.add_documents(base_documents)
+    loaded_documents = len(base_documents)
     logging.info("Loaded documents: %s", loaded_documents)
     logging.info("END VectorStoreLoadingAndIndexing")
     return store
@@ -82,10 +84,10 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
         logging.info("START SemanticSearcher")
 
         runtime_config = _collect_rag_runtime_config()
-        embedding_client = build_embedding_client(runtime_config)
-        top_documents = self._vector_store.search(
-            query=state["user_input"],
-            embedding_client=embedding_client,
+        top_k = int(runtime_config["SIMPLE_RAG_TOP_K"])
+        top_documents = self._vector_store.similarity_search(
+            state["user_input"],
+            k=top_k,
         )
 
         updated_state: RagState = dict(state)

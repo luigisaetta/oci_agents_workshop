@@ -12,15 +12,15 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Dict, List, Sequence
 
 from langchain_core.documents import Document
+from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 from tqdm import tqdm
 
 from oci_models import build_embedding_client
-from simple_rag_agent.in_memory_vector_store import InMemoryVectorStore
 from utils import collect_oci_runtime_config
 
 CHUNK_SIZE = 800
@@ -107,14 +107,14 @@ def _collect_pdf_runtime_config() -> Dict[str, str]:
     return runtime_config
 
 
-def embed_chunks(
+def add_chunks_to_vector_store(
     chunk_documents_list: Sequence[Document],
-    embedding_client: Any,
+    vector_store: InMemoryVectorStore,
     batch_size: int = EMBEDDING_BATCH_SIZE,
-) -> List[Sequence[float]]:
-    """Build embeddings for all chunks in batches with a progress bar."""
-    vectors: List[Sequence[float]] = []
+) -> int:
+    """Embed and add all chunks to vector store in batches with progress bar."""
     total_chunks = len(chunk_documents_list)
+    total_added = 0
 
     for start_index in tqdm(
         range(0, total_chunks, batch_size),
@@ -122,12 +122,10 @@ def embed_chunks(
         unit="chunk",
     ):
         chunk_batch = chunk_documents_list[start_index : start_index + batch_size]
-        batch_vectors = embedding_client.embed_documents(
-            [document.page_content for document in chunk_batch]
-        )
-        vectors.extend(batch_vectors)
+        added_ids = vector_store.add_documents(list(chunk_batch))
+        total_added += len(added_ids)
 
-    return vectors
+    return total_added
 
 
 def build_pdf_vector_store(
@@ -138,7 +136,6 @@ def build_pdf_vector_store(
     """Load PDFs, create chunk embeddings, and return an indexed in-memory store."""
     logging.info("START PdfLoadingAndIndexing")
     runtime_config = _collect_pdf_runtime_config()
-    top_k = int(runtime_config["SIMPLE_RAG_TOP_K"])
 
     raw_documents = load_pdf_documents(input_dir)
     chunks = chunk_documents(
@@ -148,10 +145,8 @@ def build_pdf_vector_store(
     )
 
     embedding_client = build_embedding_client(runtime_config)
-    vectors = embed_chunks(chunks, embedding_client=embedding_client)
-
-    vector_store = InMemoryVectorStore(base_documents=chunks, top_k=top_k)
-    loaded_documents = vector_store.set_index(chunks, vectors)
+    vector_store = InMemoryVectorStore(embedding=embedding_client)
+    loaded_documents = add_chunks_to_vector_store(chunks, vector_store=vector_store)
     logging.info("Loaded documents: %s", loaded_documents)
     logging.info("END PdfLoadingAndIndexing")
     return vector_store

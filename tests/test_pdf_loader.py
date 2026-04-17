@@ -73,19 +73,21 @@ def test_chunk_documents_splits_long_text() -> None:
     assert len(chunks) > 1
 
 
-def test_embed_chunks_returns_one_vector_per_chunk() -> None:
-    """It should return embeddings with the same cardinality as input chunks."""
-    fake_client = _FakeEmbeddingClient()
+def test_add_chunks_to_vector_store_returns_added_count() -> None:
+    """It should add all chunks to vector store and return total added count."""
+    vector_store = pdf_loader.InMemoryVectorStore(embedding=_FakeEmbeddingClient())
     chunks = [
         Document(page_content="chunk 1", metadata={"source": "x.pdf"}),
         Document(page_content="chunk 2", metadata={"source": "x.pdf"}),
     ]
 
-    vectors = pdf_loader.embed_chunks(
-        chunks, embedding_client=fake_client, batch_size=1
+    added_count = pdf_loader.add_chunks_to_vector_store(
+        chunks,
+        vector_store=vector_store,
+        batch_size=1,
     )
 
-    assert len(vectors) == 2
+    assert added_count == 2
 
 
 def test_build_pdf_vector_store_requires_pdf_files(tmp_path: Path) -> None:
@@ -118,6 +120,5 @@ def test_build_pdf_vector_store_creates_index(monkeypatch, tmp_path: Path) -> No
         chunk_overlap=50,
     )
 
-    assert store.indexed_count > 1
-    results = store.search("query", embedding_client=_FakeEmbeddingClient())
+    results = store.similarity_search("query", k=2)
     assert len(results) == 2

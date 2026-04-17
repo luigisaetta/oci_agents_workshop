@@ -43,7 +43,7 @@ conda activate oci_agents_workshop
 For running the examples only:
 
 ```bash
-pip install langchain langgraph langchain-oci langchain-text-splitters python-dotenv fastapi uvicorn pypdf tqdm
+pip install langchain langgraph langchain-oci langchain-text-splitters python-dotenv fastapi uvicorn pypdf tqdm numpy
 ```
 
 If you are doing development in this repo and want to follow all repository conventions, also install:
