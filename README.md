@@ -38,11 +38,21 @@ allow group <your-group-name> to manage generative-ai-family in compartment <you
 Reference:
 [OCI Generative AI IAM Policies](https://docs.oracle.com/en-us/iaas/Content/generative-ai/iam-policies.htm)
 
-### 2. Create and activate the Conda environment
+### 2. Create and activate a Python environment
+
+If you use **Anaconda/Miniconda**:
 
 ```bash
 conda create -n oci_agents_workshop python=3.11 -y
 conda activate oci_agents_workshop
+```
+
+If you prefer standard Python virtual environments (`venv`):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
 ```
 
 ### 3. Install required libraries
