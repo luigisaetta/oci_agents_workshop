@@ -63,23 +63,31 @@ def _collect_rag_runtime_config() -> Dict[str, str]:
 def build_initialized_vector_store(
     vector_store: InMemoryVectorStore | None = None,
 ) -> InMemoryVectorStore:
-    """Create and index a vector store with fake knowledge base documents.
+    """Build a vector store for retrieval when no external store is provided.
 
     Args:
-        vector_store: Optional pre-built vector store to reuse.
+        vector_store: Optional pre-built vector store to reuse as-is.
 
     Returns:
-        InMemoryVectorStore: Indexed vector store ready for similarity search.
+        InMemoryVectorStore: Retrieval-ready vector store.
+            If ``vector_store`` is provided, it is returned unchanged.
+            If not provided, a new in-memory store is created and seeded with
+            fake knowledge-base documents.
     """
     logging.info("START VectorStoreLoadingAndIndexing")
+
+    if vector_store is not None:
+        logging.info("Using provided vector store without fake KB seeding.")
+        logging.info("END VectorStoreLoadingAndIndexing")
+        return vector_store
+
     runtime_config = _collect_rag_runtime_config()
     embedding_client = build_embedding_client(runtime_config)
-    base_documents = build_fake_documents()
+    store = InMemoryVectorStore(embedding=embedding_client)
 
-    store = vector_store or InMemoryVectorStore(embedding=embedding_client)
+    base_documents = build_fake_documents()
     store.add_documents(base_documents)
-    loaded_documents = len(base_documents)
-    logging.info("Loaded documents: %s", loaded_documents)
+    logging.info("Loaded documents (fake KB seed): %s", len(base_documents))
     logging.info("END VectorStoreLoadingAndIndexing")
     return store
 

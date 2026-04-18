@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Unit tests for the simple two-step LangGraph RAG agent.
 """
@@ -55,6 +55,27 @@ class _FakeVectorStore:
     ) -> list[Document]:
         """Return first k documents in deterministic order."""
         return self._docs[:k]
+
+
+class _ReusableVectorStore:
+    """Store stub used to verify no fake-seeding side effects occur."""
+
+    def add_documents(self, _documents: list[Document]) -> list[str]:
+        """Fail if fake seeding tries to mutate this external store."""
+        raise AssertionError("External vector store must not be seeded with fake docs.")
+
+
+def test_build_initialized_vector_store_reuses_external_store_as_is(
+    monkeypatch,
+) -> None:
+    """It should reuse external vector stores without loading fake KB documents."""
+    monkeypatch.delenv("OCI_COMPARTMENT_ID", raising=False)
+    monkeypatch.delenv("OCI_EMBED_MODEL_ID", raising=False)
+
+    external_store = _ReusableVectorStore()
+    reused_store = rag_agent.build_initialized_vector_store(vector_store=external_store)
+
+    assert reused_store is external_store
 
 
 def test_semantic_searcher_returns_top_documents(monkeypatch) -> None:
