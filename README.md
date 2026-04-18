@@ -134,3 +134,9 @@ For LangChain/LangGraph development, a practical stack includes:
 Useful references:
 - Main repository: [oracle/langchain-oracle](https://github.com/oracle/langchain-oracle)
 - Additional sample programs: [oracle/langchain-oracle/samples](https://github.com/oracle/langchain-oracle/tree/main/samples)
+
+## Advanced Agent Examples
+
+For advanced, production-oriented GenAI agent examples on OCI, see:
+
+[oracle-devrel/technology-engineering - AI GenAI Agents](https://github.com/oracle-devrel/technology-engineering/tree/main/ai/gen-ai-agents)
