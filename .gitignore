@@ -10,6 +10,14 @@ venv/
 
 # Local environment files
 .env
+.env.local
+
+# Node/Next.js artifacts
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-error.log*
 
 # OS/editor files
 .DS_Store

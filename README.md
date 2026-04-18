@@ -118,6 +118,25 @@ python -m quickstart.agent01 "Explain what a Dedicated AI Cluster is in OCI."
 python -m quickstart.embedding01
 ```
 
+### 8. Run the web client (Next.js)
+
+Start the API backend first:
+
+```bash
+uvicorn simple_rag_agent.api:app --reload --port 8000
+```
+
+Then start the web UI:
+
+```bash
+cd apps/simple_rag_web
+cp .env.local.example .env.local
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000` and ask your first question.
+
 ## DAC Notes
 
 When using DAC in these examples, the `OCI_MODEL_ID` value must be the OCID of the DAC endpoint.

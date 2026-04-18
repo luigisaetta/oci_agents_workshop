@@ -7,7 +7,7 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 ## [Unreleased]
 
 ### Added
-- Initial changelog file.
+- Next.js web client example in `apps/simple_rag_web` for calling the Simple RAG HTTP API.
 
 ## [2026-04-18]
 
@@ -24,4 +24,3 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 - README setup updated with both `conda` and `venv` options.
 - README Oracle section improved with additional reference to `oracle/langchain-oracle/samples`.
 - Docstrings and inline comments improved across core modules for readability.
-

@@ -1,0 +1,253 @@
+:root {
+  --bg-0: #0d1b2a;
+  --bg-1: #13293d;
+  --bg-2: #1b3a4b;
+  --surface: #f7f8fa;
+  --surface-soft: #e9eef3;
+  --text-main: #102433;
+  --text-subtle: #496174;
+  --accent: #ff7a18;
+  --accent-2: #00a6a6;
+  --danger: #b42318;
+  --ring: rgba(255, 122, 24, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Avenir Next", "Trebuchet MS", "Gill Sans", sans-serif;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 122, 24, 0.2), transparent 35%),
+    radial-gradient(circle at 90% 100%, rgba(0, 166, 166, 0.2), transparent 32%),
+    linear-gradient(145deg, var(--bg-0), var(--bg-1) 42%, var(--bg-2));
+}
+
+.page-shell {
+  width: min(1100px, 92vw);
+  margin: 2.5rem auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.hero-card,
+.panel {
+  background: var(--surface);
+  border-radius: 20px;
+  box-shadow:
+    0 16px 32px rgba(5, 10, 20, 0.24),
+    0 1px 2px rgba(5, 10, 20, 0.08);
+}
+
+.hero-card {
+  padding: 1.5rem 1.5rem 1.25rem;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.76rem;
+  color: var(--text-subtle);
+}
+
+h1 {
+  margin: 0.35rem 0 0.7rem;
+  font-size: clamp(1.6rem, 2.9vw, 2.5rem);
+  line-height: 1.15;
+}
+
+.hero-description {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--text-subtle);
+}
+
+.endpoint-pill {
+  margin: 1rem 0 0;
+  padding: 0.5rem 0.75rem;
+  display: inline-flex;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text-subtle);
+  font-size: 0.9rem;
+}
+
+.endpoint-pill code {
+  font-family: var(--font-mono), monospace;
+  color: var(--text-main);
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.panel {
+  padding: 1.25rem;
+}
+
+label,
+h2 {
+  margin: 0 0 0.55rem;
+  display: block;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-subtle);
+}
+
+h2 {
+  margin-top: 1rem;
+}
+
+textarea {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  resize: vertical;
+  min-height: 145px;
+  border: 1px solid #c5d1dc;
+  border-radius: 12px;
+  font: 500 0.97rem/1.45 "Avenir Next", "Trebuchet MS", "Gill Sans", sans-serif;
+  color: var(--text-main);
+  background: #fff;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+.actions {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+button {
+  border: 0;
+  border-radius: 12px;
+  padding: 0.72rem 1rem;
+  font: 700 0.92rem/1 "Avenir Next", "Trebuchet MS", "Gill Sans", sans-serif;
+  color: #fff;
+  background: linear-gradient(125deg, var(--accent), #ff5f37);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.2s ease;
+}
+
+button:hover:enabled {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.answer-box {
+  margin: 0;
+  min-height: 150px;
+  white-space: pre-wrap;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  background: #fff;
+  border: 1px solid #c5d1dc;
+  line-height: 1.5;
+}
+
+.doc-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.doc-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  border: 1px solid #d3dde7;
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+}
+
+.doc-list p {
+  margin: 0.1rem 0;
+  color: #234155;
+  font-size: 0.92rem;
+}
+
+.doc-index {
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 166, 166, 0.14);
+  color: #055a5a;
+  font: 700 0.9rem/1 "Menlo", "Consolas", monospace;
+}
+
+.empty-state {
+  margin: 0.3rem 0 0;
+  color: var(--text-subtle);
+}
+
+.error-box {
+  margin: 0.85rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #f6cac6;
+  border-radius: 10px;
+  background: #fff0ef;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.reveal-up {
+  animation: revealUp 440ms ease-out both;
+}
+
+.delay-1 {
+  animation-delay: 90ms;
+}
+
+.delay-2 {
+  animation-delay: 170ms;
+}
+
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 940px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-shell {
+    margin: 1.2rem auto 1.8rem;
+    gap: 1rem;
+  }
+}
