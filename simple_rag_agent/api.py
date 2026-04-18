@@ -8,12 +8,14 @@ Description: FastAPI server exposing the simple RAG agent over HTTP.
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, List
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from simple_rag_agent.pdf_loader import build_pdf_vector_store, list_pdf_files
@@ -51,6 +53,22 @@ async def lifespan(app_instance: FastAPI):
 
 
 app = FastAPI(title="Simple RAG Agent API", lifespan=lifespan)
+
+# Allow local web clients (for example Next.js on :3000) by default.
+cors_origins_raw = os.getenv(
+    "SIMPLE_RAG_CORS_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000",
+)
+cors_origins = [
+    origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class InvokeRequest(BaseModel):
