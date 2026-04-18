@@ -125,10 +125,11 @@ The DAC endpoint must be public for these examples.
 ## Oracle Support Libraries
 
 Integration with OCI Enterprise AI can be implemented in different ways.
-One practical option, especially for LangChain/LangGraph development, is based on:
+For LangChain/LangGraph development, a practical stack includes:
 
 - `langchain-oci`
 - `langchain-oracledb`
 
-Reference repository:
-[oracle/langchain-oracle](https://github.com/oracle/langchain-oracle)
+Useful references:
+- Main repository: [oracle/langchain-oracle](https://github.com/oracle/langchain-oracle)
+- Additional sample programs: [oracle/langchain-oracle/samples](https://github.com/oracle/langchain-oracle/tree/main/samples)
