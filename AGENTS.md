@@ -22,9 +22,10 @@ AI through a structured, progressive, and practical learning path.
    - `Description` with a brief summary
 8. Write clear docstrings in English for public modules, classes, functions, and methods; include `Args`, `Returns`, and `Raises` sections when applicable.
 9. When reusable functions are identified during development, move them into appropriate modules under `common` instead of duplicating logic across scripts.
-10. After every code change, run `black` for formatting.
-11. After formatting, run `pylint`.
-12. Check and fix all `pylint` warnings/errors for touched files.
+10. When a new example is added to the repository, add a corresponding entry to `CHANGELOG.md`.
+11. After every code change, run `black` for formatting.
+12. After formatting, run `pylint`.
+13. Check and fix all `pylint` warnings/errors for touched files.
 
 ## Standard Workflow
 
@@ -32,8 +33,9 @@ AI through a structured, progressive, and practical learning path.
 2. Use editable installation for local development: `pip install -e ".[dev]"`.
 3. Extract reusable functions into appropriate modules under `common`.
 4. Add or update docstrings to keep code intent, inputs, and outputs clear.
-5. For significant changes, add or update `pytest` tests in `tests`.
-6. Run `pytest` from the root folder.
-7. Run `black`.
-8. Run `pylint`.
-9. Fix all `pylint` issues in touched files.
+5. If you add a new example, update `CHANGELOG.md` in the same change set.
+6. For significant changes, add or update `pytest` tests in `tests`.
+7. Run `pytest` from the root folder.
+8. Run `black`.
+9. Run `pylint`.
+10. Fix all `pylint` issues in touched files.
