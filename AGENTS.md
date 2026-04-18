@@ -29,10 +29,11 @@ AI through a structured, progressive, and practical learning path.
 ## Standard Workflow
 
 1. Write or update the code, keeping it simple.
-2. Extract reusable functions into appropriate modules under `common`.
-3. Add or update docstrings to keep code intent, inputs, and outputs clear.
-4. For significant changes, add or update `pytest` tests in `tests`.
-5. Run `pytest` from the root folder.
-6. Run `black`.
-7. Run `pylint`.
-8. Fix all `pylint` issues in touched files.
+2. Use editable installation for local development: `pip install -e ".[dev]"`.
+3. Extract reusable functions into appropriate modules under `common`.
+4. Add or update docstrings to keep code intent, inputs, and outputs clear.
+5. For significant changes, add or update `pytest` tests in `tests`.
+6. Run `pytest` from the root folder.
+7. Run `black`.
+8. Run `pylint`.
+9. Fix all `pylint` issues in touched files.

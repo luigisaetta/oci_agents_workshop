@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oci-agents-workshop"
+version = "0.1.0"
+description = "Practical OCI Enterprise AI examples with quickstart workflows and a simple RAG agent."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "L. Saetta" }]
+dependencies = [
+    "langchain",
+    "langgraph",
+    "langchain-oci",
+    "langchain-text-splitters",
+    "python-dotenv",
+    "fastapi",
+    "uvicorn",
+    "pypdf",
+    "tqdm",
+    "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "pylint",
+]
+
+[tool.setuptools]
+packages = ["common", "quickstart", "simple_rag_agent"]

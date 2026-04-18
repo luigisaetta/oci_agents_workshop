@@ -55,18 +55,18 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-### 3. Install required libraries
+### 3. Install the project in editable mode
 
-For running the examples only:
+For running the examples:
 
 ```bash
-pip install langchain langgraph langchain-oci langchain-text-splitters python-dotenv fastapi uvicorn pypdf tqdm numpy
+pip install -e .
 ```
 
-If you are doing development in this repo and want to follow all repository conventions, also install:
+For development (tests + formatting + lint):
 
 ```bash
-pip install pytest black pylint
+pip install -e ".[dev]"
 ```
 
 ### 4. Configure OCI authentication
