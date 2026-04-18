@@ -2,6 +2,11 @@
 
 These instructions apply to all future code changes in this repository.
 
+## Project Goal
+
+Guide users from zero to building AI solutions and AI agents on OCI Enterprise
+AI through a structured, progressive, and practical learning path.
+
 ## Priority Order (Highest to Lowest)
 
 1. Keep generated code as simple as possible.
