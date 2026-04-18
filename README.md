@@ -2,10 +2,17 @@
 
 ![Python](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white) ![Black](https://img.shields.io/badge/code%20style-black-000000.svg) ![Pylint](https://img.shields.io/badge/linting-pylint-2A6AC7?logo=python&logoColor=white) ![Pytest](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)
 
-This folder contains practical examples to help you start building agents with LangChain and LangGraph.
-The examples are designed first and foremost to run in **OCI Enterprise AI**.
+Build and run practical AI agent workflows on **OCI Enterprise AI** with a
+hands-on path from first API call to retrieval-augmented generation.
 
-A specific focus is included for **DAC (Dedicated AI Cluster)** based deployments and runtime configuration.
+This workshop includes:
+- quickstart programs for chat streaming, LangGraph orchestration, and embeddings;
+- a simple RAG agent exposed via FastAPI, with support for fake KB or local PDF ingestion;
+- shared runtime/model utilities to keep OCI configuration consistent across examples.
+
+Special attention is given to **DAC (Dedicated AI Cluster)** deployments and
+runtime configuration, so you can move from local experimentation to
+enterprise-oriented serving patterns.
 
 ## Quickstart
 
