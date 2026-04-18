@@ -84,9 +84,6 @@ export default function HomePage() {
           Ask a question, call the FastAPI endpoint, and inspect both the final
           answer and retrieved document metadata.
         </p>
-        <p className="endpoint-pill">
-          Endpoint: <code>{invokeUrl}</code>
-        </p>
       </section>
 
       <section className="workspace-grid">
@@ -101,9 +98,6 @@ export default function HomePage() {
             placeholder="http://127.0.0.1:8000/invoke"
             required
           />
-          <p className="settings-help">
-            Default: <code>{FALLBACK_INVOKE_URL}</code>
-          </p>
           <div className="actions">
             <button
               type="button"
@@ -131,14 +125,29 @@ export default function HomePage() {
                 type="submit"
                 disabled={isLoading || !question.trim() || !invokeUrl.trim()}
               >
-                {isLoading ? "Sending..." : "Ask RAG API"}
+                {isLoading ? (
+                  <>
+                    <span className="spinner" aria-hidden="true" />
+                    Waiting response...
+                  </>
+                ) : (
+                  "Ask RAG API"
+                )}
               </button>
             </div>
             {error ? <p className="error-box">{error}</p> : null}
           </form>
 
           <section className="panel reveal-up delay-2">
-            <h2>Answer</h2>
+            <div className="answer-header">
+              <h2>Answer</h2>
+              {isLoading ? (
+                <span className="loading-chip">
+                  <span className="spinner" aria-hidden="true" />
+                  Generating...
+                </span>
+              ) : null}
+            </div>
             <div className="answer-box">
               {answer ? (
                 <div className="markdown-output">

@@ -71,22 +71,6 @@ h1 {
   color: var(--text-subtle);
 }
 
-.endpoint-pill {
-  margin: 1rem 0 0;
-  padding: 0.5rem 0.75rem;
-  display: inline-flex;
-  gap: 0.5rem;
-  border-radius: 999px;
-  background: var(--surface-soft);
-  color: var(--text-subtle);
-  font-size: 0.9rem;
-}
-
-.endpoint-pill code {
-  font-family: "Menlo", "Consolas", monospace;
-  color: var(--text-main);
-}
-
 .workspace-grid {
   display: grid;
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
@@ -96,7 +80,7 @@ h1 {
 
 .content-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 1.25rem;
 }
 
@@ -157,18 +141,6 @@ input[type="url"]:focus {
   top: 1rem;
 }
 
-.settings-help {
-  margin: 0.6rem 0 0;
-  color: var(--text-subtle);
-  font-size: 0.86rem;
-  line-height: 1.4;
-}
-
-.settings-help code {
-  font-family: "Menlo", "Consolas", monospace;
-  color: #234155;
-}
-
 .actions {
   margin-top: 0.9rem;
   display: flex;
@@ -179,6 +151,9 @@ button {
   border: 0;
   border-radius: 12px;
   padding: 0.72rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   font: 700 0.92rem/1 "Avenir Next", "Trebuchet MS", "Gill Sans", sans-serif;
   color: #fff;
   background: linear-gradient(125deg, var(--accent), #ff5f37);
@@ -204,6 +179,42 @@ button:disabled {
   background: #fff;
   border: 1px solid #c5d1dc;
   line-height: 1.5;
+}
+
+.answer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.answer-header h2 {
+  margin: 0;
+}
+
+.loading-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: #1f4c5f;
+  background: #e2f3f8;
+}
+
+.spinner {
+  width: 0.92rem;
+  height: 0.92rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  border-top-color: #fff;
+  animation: spin 0.75s linear infinite;
+}
+
+.loading-chip .spinner {
+  border-color: rgba(31, 76, 95, 0.25);
+  border-top-color: #1f4c5f;
 }
 
 .markdown-output > :first-child {
@@ -358,6 +369,15 @@ button:disabled {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 

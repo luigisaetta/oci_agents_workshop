@@ -12,6 +12,7 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 ### Changed
 - Added a configuration sidebar to `apps/simple_rag_web` with editable backend invoke URL.
 - Improved web client answer rendering by adding Markdown support (`react-markdown` + `remark-gfm`).
+- Updated web client layout to place output below input and added loading spinner feedback during backend calls.
 
 ## [2026-04-18]
 
