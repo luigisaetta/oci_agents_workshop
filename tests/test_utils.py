@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Unit tests for utility helpers used by the OCI chat example.
 """
@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from utils import (
+from common.utils import (
     collect_oci_runtime_config,
     print_oci_runtime_config,
     print_streamed_response,

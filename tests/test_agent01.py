@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Unit tests for the simple three-step LangGraph agent.
 """
@@ -14,8 +14,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import agent01
-from utils import extract_text
+from quickstart import agent01
+from common.utils import extract_text
 
 
 class _FakeLlm:
@@ -78,7 +78,7 @@ def test_step2_raises_when_compartment_is_missing(monkeypatch) -> None:
 def test_main_prints_json_output(monkeypatch, capsys) -> None:
     """It should print the final JSON payload to stdout."""
     monkeypatch.setattr(agent01, "run_agent", lambda _: {"output": "ok"})
-    monkeypatch.setattr("sys.argv", ["agent01.py", "hello"])
+    monkeypatch.setattr("sys.argv", ["quickstart/agent01.py", "hello"])
     agent01.main()
     captured = capsys.readouterr()
     assert json.loads(captured.out.strip()) == {"output": "ok"}

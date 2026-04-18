@@ -78,16 +78,16 @@ Then edit `.env` and set at least:
 - `OCI_COMPARTMENT_ID` (required)
 - `OCI_REGION` (for endpoint generation)
 - `OCI_MODEL_ID`
-- `OCI_EMBED_MODEL_ID` (embedding model for `embedding01.py` and `simple_rag_agent`)
+- `OCI_EMBED_MODEL_ID` (embedding model for `quickstart/embedding01.py` and `simple_rag_agent`)
 - `SIMPLE_RAG_TOP_K` (number of retrieved documents for `simple_rag_agent`, default: `4`)
 - `OCI_PROVIDER`
 - `OCI_AUTH_TYPE`
 - `OCI_AUTH_PROFILE`
 
-### 6. Run the first configuration test (`test01.py`)
+### 6. Run the first configuration test (`quickstart/test01.py`)
 
 ```bash
-python test01.py
+python -m quickstart.test01
 ```
 
 This is the first test to run after environment setup. If it prints the runtime
@@ -96,8 +96,8 @@ configuration and returns a streamed response, your OCI configuration is working
 ### 7. Run other examples
 
 ```bash
-python agent01.py "Explain what a Dedicated AI Cluster is in OCI."
-python embedding01.py
+python -m quickstart.agent01 "Explain what a Dedicated AI Cluster is in OCI."
+python -m quickstart.embedding01
 ```
 
 ## DAC Notes

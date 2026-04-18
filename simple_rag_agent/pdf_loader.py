@@ -20,8 +20,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 from tqdm import tqdm
 
-from oci_models import build_embedding_client
-from utils import collect_oci_runtime_config
+from common.oci_models import build_embedding_client
+from common.utils import collect_oci_runtime_config
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 200

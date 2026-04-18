@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Unit tests for the embedding01 OCI embedding example.
 """
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-import embedding01
+from quickstart import embedding01
 
 
 class _FakeEmbeddingClient:

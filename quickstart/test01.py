@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Minimal OCI chat streaming example using LangChain ChatOCIGenAI.
 """
@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from langchain_oci import ChatOCIGenAI
 
-from utils import (
+from common.utils import (
     collect_oci_runtime_config,
     print_oci_runtime_config,
     print_streamed_response,
@@ -20,8 +20,8 @@ from utils import (
 
 def main() -> None:
     """Run a streaming chat completion against OCI Generative AI."""
-    # Load environment variables from .env in the same directory as this script.
-    load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+    # Load environment variables from the project root .env file.
+    load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
     # Collect all OCI runtime settings in one place for reuse and logging.
     runtime_config = collect_oci_runtime_config()

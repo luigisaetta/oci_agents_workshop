@@ -17,8 +17,12 @@ from dotenv import load_dotenv
 from langchain_core.runnables import RunnableSerializable
 from langgraph.graph import END, StateGraph
 
-from oci_models import build_llm
-from utils import collect_oci_runtime_config, extract_text, print_oci_runtime_config
+from common.oci_models import build_llm
+from common.utils import (
+    collect_oci_runtime_config,
+    extract_text,
+    print_oci_runtime_config,
+)
 
 
 class AgentState(TypedDict, total=False):
@@ -174,7 +178,7 @@ def main() -> None:
     Returns:
         None: This function prints the result to stdout.
     """
-    load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+    load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
     parser = argparse.ArgumentParser(description="Simple 3-step LangGraph agent.")
     parser.add_argument("request", type=str, help="Prompt text to send to the model.")

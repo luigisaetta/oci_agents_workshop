@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Sequence
 
 from dotenv import load_dotenv
 
-from oci_models import build_embedding_client
-from utils import collect_oci_runtime_config, print_oci_runtime_config
+from common.oci_models import build_embedding_client
+from common.utils import collect_oci_runtime_config, print_oci_runtime_config
 
 
 def build_embedding_runtime_config() -> Dict[str, str]:
@@ -95,7 +95,7 @@ def main() -> None:
     Returns:
         None: This function prints a JSON summary to stdout.
     """
-    load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+    load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
     runtime_config = build_embedding_runtime_config()
     print_oci_runtime_config(runtime_config)

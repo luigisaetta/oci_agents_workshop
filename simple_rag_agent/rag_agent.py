@@ -16,10 +16,10 @@ from langchain_core.runnables import RunnableSerializable
 from langchain_core.vectorstores import InMemoryVectorStore
 from langgraph.graph import END, StateGraph
 
-from oci_models import build_embedding_client, build_llm
+from common.utils import collect_oci_runtime_config, extract_text
+from common.oci_models import build_embedding_client, build_llm
 from simple_rag_agent.fake_knowledge_base import build_fake_documents
 from simple_rag_agent.prompts import build_answer_prompt
-from utils import collect_oci_runtime_config, extract_text
 
 
 class RagState(TypedDict, total=False):
