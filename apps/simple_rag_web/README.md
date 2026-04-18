@@ -16,10 +16,12 @@ The app runs on `http://localhost:3000`.
 
 ## API Configuration
 
-Set the backend base URL with:
+Set the backend invoke URL with:
 
 ```bash
-NEXT_PUBLIC_RAG_API_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_RAG_INVOKE_URL=http://127.0.0.1:8000/invoke
 ```
 
-If not set, the client defaults to `http://127.0.0.1:8000`.
+If not set, the client defaults to `http://127.0.0.1:8000/invoke`.
+
+You can also edit the URL directly from the UI sidebar (`Configuration` panel).

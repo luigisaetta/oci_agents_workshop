@@ -136,6 +136,8 @@ npm run dev
 ```
 
 Open `http://localhost:3000` and ask your first question.
+The backend endpoint can be changed in `apps/simple_rag_web/.env.local`
+(`NEXT_PUBLIC_RAG_INVOKE_URL`) or directly from the UI sidebar.
 
 ## DAC Notes
 
