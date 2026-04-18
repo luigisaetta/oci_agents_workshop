@@ -3,7 +3,8 @@
 ![Python](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white) ![Black](https://img.shields.io/badge/code%20style-black-000000.svg) ![Pylint](https://img.shields.io/badge/linting-pylint-2A6AC7?logo=python&logoColor=white) ![Pytest](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)
 
 Build and run practical AI agent workflows on **OCI Enterprise AI** with a
-hands-on path from first API call to retrieval-augmented generation.
+hands-on path from the first API call to the development of powerful and
+complex AI agents on OCI.
 
 This workshop includes:
 - quickstart programs for chat streaming, LangGraph orchestration, and embeddings;
