@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type RetrievedDoc = {
   source?: string;
@@ -138,7 +140,13 @@ export default function HomePage() {
           <section className="panel reveal-up delay-2">
             <h2>Answer</h2>
             <div className="answer-box">
-              {answer || "No answer yet. Submit a question to start."}
+              {answer ? (
+                <div className="markdown-output">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
+                </div>
+              ) : (
+                "No answer yet. Submit a question to start."
+              )}
             </div>
 
             <h2>Retrieved Documents</h2>
