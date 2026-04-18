@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Shared utility functions for OCI runtime config and stream output.
 """
@@ -12,7 +12,14 @@ from typing import Any, Dict, Iterable
 
 
 def collect_oci_runtime_config() -> Dict[str, str]:
-    """Build a reusable OCI runtime config dictionary from environment variables."""
+    """Build reusable OCI runtime config from environment variables.
+
+    Returns:
+        Dict[str, str]: Runtime config used by model and embedding builders.
+
+    Raises:
+        ValueError: If ``OCI_COMPARTMENT_ID`` is missing.
+    """
     model_id = os.getenv("OCI_MODEL_ID", "meta.llama-3.3-70b-instruct")
     region = os.getenv("OCI_REGION", "us-chicago-1")
     service_endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
@@ -35,7 +42,14 @@ def collect_oci_runtime_config() -> Dict[str, str]:
 
 
 def print_oci_runtime_config(config: Dict[str, str]) -> None:
-    """Print the OCI runtime config used for model execution."""
+    """Print OCI runtime configuration values.
+
+    Args:
+        config: Runtime configuration dictionary to print.
+
+    Returns:
+        None: This function writes to stdout.
+    """
     print("-------- OCI Runtime Configuration --------")
     for key, value in config.items():
         print(f"  {key}={value}")
@@ -43,7 +57,14 @@ def print_oci_runtime_config(config: Dict[str, str]) -> None:
 
 
 def print_streamed_response(stream: Iterable[object]) -> None:
-    """Print streamed model chunks as they arrive."""
+    """Print streamed model chunks as they arrive.
+
+    Args:
+        stream: Iterable yielding model chunks with optional ``content`` field.
+
+    Returns:
+        None: This function writes streaming output to stdout.
+    """
     print("-------- Model Streaming Output --------")
 
     for chunk in stream:
@@ -55,7 +76,14 @@ def print_streamed_response(stream: Iterable[object]) -> None:
 
 
 def extract_text(response: Any) -> str:
-    """Extract plain text from a model response object."""
+    """Extract plain text from heterogeneous model response formats.
+
+    Args:
+        response: Model response object, string, or list-like structured payload.
+
+    Returns:
+        str: Extracted plain-text representation.
+    """
     if hasattr(response, "content"):
         content = response.content
     else:
@@ -65,6 +93,7 @@ def extract_text(response: Any) -> str:
         return content
 
     if isinstance(content, list):
+        # Some providers return segmented content with mixed item formats.
         text_parts: list[str] = []
         for item in content:
             if isinstance(item, str):

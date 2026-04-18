@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Simple LangGraph agent with three sequential Runnable steps.
 """
@@ -37,10 +37,19 @@ class Step1LogInput(RunnableSerializable[AgentState, AgentState]):
     def invoke(
         self, state: AgentState, _config: Any = None, **_kwargs: Any
     ) -> AgentState:
-        """Log the input and keep state unchanged."""
+        """Collect runtime config and log the input request.
+
+        Args:
+            state: Input graph state containing user input.
+            _config: Optional LangGraph runtime config, unused.
+            **_kwargs: Extra LangGraph invocation arguments, unused.
+
+        Returns:
+            AgentState: Updated state including runtime config.
+        """
         logging.info("Running step: step1_log_input")
         logging.info("Input text: %s", state["user_input"])
-        
+
         runtime_config = collect_oci_runtime_config()
         print_oci_runtime_config(runtime_config)
 
@@ -62,7 +71,19 @@ class Step2InvokeModel(RunnableSerializable[AgentState, AgentState]):
     def invoke(
         self, state: AgentState, _config: Any = None, **_kwargs: Any
     ) -> AgentState:
-        """Invoke the model and store the raw response in state."""
+        """Invoke OCI model and store raw response in state.
+
+        Args:
+            state: Input graph state with user input and runtime config.
+            _config: Optional LangGraph runtime config, unused.
+            **_kwargs: Extra LangGraph invocation arguments, unused.
+
+        Returns:
+            AgentState: Updated state including the raw model response.
+
+        Raises:
+            ValueError: If compartment id is missing in runtime config.
+        """
         logging.info("Running step: step2_invoke_model")
 
         runtime_config = state.get("runtime_config", collect_oci_runtime_config())
@@ -84,7 +105,16 @@ class Step3BuildJsonOutput(RunnableSerializable[AgentState, AgentState]):
     def invoke(
         self, state: AgentState, _config: Any = None, **_kwargs: Any
     ) -> AgentState:
-        """Extract model text and store it as final output."""
+        """Extract plain text from model response and store final output.
+
+        Args:
+            state: Input graph state containing raw model response.
+            _config: Optional LangGraph runtime config, unused.
+            **_kwargs: Extra LangGraph invocation arguments, unused.
+
+        Returns:
+            AgentState: Updated state containing output text.
+        """
         logging.info("Running step: step3_build_json_output")
         output_text = extract_text(state["model_response"])
 
@@ -96,7 +126,14 @@ class Step3BuildJsonOutput(RunnableSerializable[AgentState, AgentState]):
 def build_agent_graph(
     llm_builder: Callable[[Dict[str, str]], Any] = build_llm,
 ):
-    """Build and compile the three-step sequential graph."""
+    """Build and compile the three-step sequential LangGraph pipeline.
+
+    Args:
+        llm_builder: Factory used to build the model client from runtime config.
+
+    Returns:
+        Any: Compiled LangGraph runnable.
+    """
     graph_builder = StateGraph(AgentState)
     graph_builder.add_node("step1_log_input", Step1LogInput())
     graph_builder.add_node(
@@ -115,7 +152,15 @@ def build_agent_graph(
 def run_agent(
     user_input: str, llm_builder: Callable[[Dict[str, str]], Any] = build_llm
 ) -> Dict[str, str]:
-    """Run the graph and return the final JSON-compatible output dictionary."""
+    """Run the graph and return final JSON-compatible output.
+
+    Args:
+        user_input: User prompt sent to the agent.
+        llm_builder: Factory used to build the model client.
+
+    Returns:
+        Dict[str, str]: Dictionary containing output text.
+    """
     graph = build_agent_graph(llm_builder=llm_builder)
 
     result_state: AgentState = graph.invoke({"user_input": user_input})
@@ -124,7 +169,11 @@ def run_agent(
 
 
 def main() -> None:
-    """Read prompt from CLI, run the graph, and print JSON output."""
+    """Read prompt from CLI, run the graph, and print JSON output.
+
+    Returns:
+        None: This function prints the result to stdout.
+    """
     load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
     parser = argparse.ArgumentParser(description="Simple 3-step LangGraph agent.")

@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: FastAPI server exposing the simple RAG agent over HTTP.
 """
@@ -30,10 +30,18 @@ logging.basicConfig(
 
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
-    """Load and index the vector store once when API starts."""
+    """Load and index vector store once when the API starts.
+
+    Args:
+        app_instance: FastAPI application instance.
+
+    Yields:
+        None: Control is handed back to FastAPI for app serving.
+    """
     input_dir = Path(__file__).resolve().parent.parent / "input_pdf"
     pdf_files = list_pdf_files(input_dir)
 
+    # Prefer PDF-backed retrieval when local source documents are available.
     if pdf_files:
         app_instance.state.vector_store = build_pdf_vector_store(input_dir=input_dir)
     else:
@@ -46,13 +54,22 @@ app = FastAPI(title="Simple RAG Agent API", lifespan=lifespan)
 
 
 class InvokeRequest(BaseModel):
-    """Input payload for RAG invocation."""
+    """Request payload for RAG invocation.
+
+    Attributes:
+        request: User question sent to the RAG pipeline.
+    """
 
     request: str
 
 
 class InvokeResponse(BaseModel):
-    """Output payload for RAG invocation."""
+    """Response payload returned by the RAG endpoint.
+
+    Attributes:
+        output: Final generated answer.
+        retrieved_docs: Metadata list for retrieved context documents.
+    """
 
     output: str
     retrieved_docs: List[dict[str, Any]]
@@ -60,7 +77,15 @@ class InvokeResponse(BaseModel):
 
 @app.post("/invoke", response_model=InvokeResponse)
 def invoke_agent(payload: InvokeRequest, request: Request) -> InvokeResponse:
-    """Invoke the simple RAG agent and return its JSON output."""
+    """Invoke the RAG agent and return structured JSON response.
+
+    Args:
+        payload: Request body containing the user prompt.
+        request: FastAPI request object used to access app state.
+
+    Returns:
+        InvokeResponse: Generated answer and retrieved docs metadata.
+    """
     result = run_rag_agent(
         payload.request,
         vector_store=request.app.state.vector_store,

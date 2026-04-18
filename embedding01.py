@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Minimal OCI embedding example for a list of texts using langchain-oci.
 """
@@ -19,7 +19,14 @@ from utils import collect_oci_runtime_config, print_oci_runtime_config
 
 
 def build_embedding_runtime_config() -> Dict[str, str]:
-    """Build OCI runtime config and require a dedicated embedding model id."""
+    """Build OCI runtime config and require a dedicated embedding model id.
+
+    Returns:
+        Dict[str, str]: OCI runtime config extended with embedding model id.
+
+    Raises:
+        ValueError: If ``OCI_EMBED_MODEL_ID`` is missing.
+    """
     runtime_config = collect_oci_runtime_config()
     embed_model_id = os.getenv("OCI_EMBED_MODEL_ID", "").strip()
     if not embed_model_id:
@@ -33,7 +40,18 @@ def generate_embeddings(
     texts: Sequence[str],
     embedding_client: Any,
 ) -> List[List[float]]:
-    """Generate embeddings for the provided text list."""
+    """Generate embeddings for a list of input texts.
+
+    Args:
+        texts: Input text collection to embed.
+        embedding_client: Embedding client exposing ``embed_documents``.
+
+    Returns:
+        List[List[float]]: One embedding vector per input text.
+
+    Raises:
+        ValueError: If the input list is empty.
+    """
     text_list = list(texts)
     if not text_list:
         raise ValueError("Provide at least one text.")
@@ -43,7 +61,18 @@ def generate_embeddings(
 def summarize_embeddings(
     texts: Sequence[str], vectors: Sequence[Sequence[float]]
 ) -> List[Dict[str, Any]]:
-    """Build a compact summary of generated embeddings."""
+    """Build a compact summary of generated embeddings.
+
+    Args:
+        texts: Original input texts.
+        vectors: Embedding vectors produced for those texts.
+
+    Returns:
+        List[Dict[str, Any]]: Summary list with index, text and vector preview.
+
+    Raises:
+        ValueError: If text count and vector count are different.
+    """
     if len(texts) != len(vectors):
         raise ValueError("Texts and vectors must have the same length.")
 
@@ -61,7 +90,11 @@ def summarize_embeddings(
 
 
 def main() -> None:
-    """Run a minimal embedding generation example against OCI Generative AI."""
+    """Run a minimal embedding generation example against OCI Generative AI.
+
+    Returns:
+        None: This function prints a JSON summary to stdout.
+    """
     load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
     runtime_config = build_embedding_runtime_config()

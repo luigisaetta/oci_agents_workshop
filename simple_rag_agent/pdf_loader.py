@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Load PDFs from input_pdf, chunk text, and build embeddings for simple RAG.
 """
@@ -29,14 +29,29 @@ EMBEDDING_BATCH_SIZE = 16
 
 
 def list_pdf_files(input_dir: Path) -> List[Path]:
-    """Return sorted PDF file paths from the input directory."""
+    """Return sorted PDF file paths from the input directory.
+
+    Args:
+        input_dir: Directory expected to contain PDF documents.
+
+    Returns:
+        List[Path]: Sorted list of existing PDF files.
+    """
     if not input_dir.exists():
         return []
     return sorted(path for path in input_dir.glob("*.pdf") if path.is_file())
 
 
 def _resolve_pdf_title(reader: PdfReader, pdf_path: Path) -> str:
-    """Resolve a readable title from PDF metadata with filename fallback."""
+    """Resolve a readable document title.
+
+    Args:
+        reader: PDF reader instance with optional metadata.
+        pdf_path: Source PDF path used as fallback title.
+
+    Returns:
+        str: Metadata title when available, otherwise file stem.
+    """
     metadata = reader.metadata
     if metadata and metadata.title:
         return str(metadata.title).strip() or pdf_path.stem
@@ -44,7 +59,17 @@ def _resolve_pdf_title(reader: PdfReader, pdf_path: Path) -> str:
 
 
 def load_pdf_documents(input_dir: Path) -> List[Document]:
-    """Read all PDFs from input_dir and return one raw document per page."""
+    """Read all PDFs and convert pages with text into LangChain documents.
+
+    Args:
+        input_dir: Directory containing source PDF files.
+
+    Returns:
+        List[Document]: One document per non-empty page.
+
+    Raises:
+        ValueError: If no PDFs are found or no text can be extracted.
+    """
     pdf_paths = list_pdf_files(input_dir)
     if not pdf_paths:
         raise ValueError(f"No PDF files found in {input_dir}.")
@@ -78,7 +103,16 @@ def chunk_documents(
     chunk_size: int = CHUNK_SIZE,
     chunk_overlap: int = CHUNK_OVERLAP,
 ) -> List[Document]:
-    """Split documents into chunks with LangChain RecursiveCharacterTextSplitter."""
+    """Split documents into overlapping chunks for retrieval.
+
+    Args:
+        documents: Source documents to split.
+        chunk_size: Maximum number of characters per chunk.
+        chunk_overlap: Shared characters between consecutive chunks.
+
+    Returns:
+        List[Document]: Chunked documents suitable for embedding.
+    """
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -87,7 +121,14 @@ def chunk_documents(
 
 
 def _collect_pdf_runtime_config() -> Dict[str, str]:
-    """Collect OCI runtime settings required by PDF embedding pipeline."""
+    """Collect OCI runtime settings required by PDF embedding pipeline.
+
+    Returns:
+        Dict[str, str]: OCI runtime settings with embed model id and top-k.
+
+    Raises:
+        ValueError: If required environment variables are missing or invalid.
+    """
     runtime_config = collect_oci_runtime_config()
 
     embed_model_id = os.getenv("OCI_EMBED_MODEL_ID", "").strip()
@@ -112,7 +153,16 @@ def add_chunks_to_vector_store(
     vector_store: InMemoryVectorStore,
     batch_size: int = EMBEDDING_BATCH_SIZE,
 ) -> int:
-    """Embed and add all chunks to vector store in batches with progress bar."""
+    """Embed and add chunks to a vector store in batches.
+
+    Args:
+        chunk_documents_list: Chunked documents to embed and index.
+        vector_store: Destination in-memory vector store.
+        batch_size: Number of chunks processed per embedding call.
+
+    Returns:
+        int: Number of chunk entries added to the store.
+    """
     total_chunks = len(chunk_documents_list)
     total_added = 0
 
@@ -133,7 +183,16 @@ def build_pdf_vector_store(
     chunk_size: int = CHUNK_SIZE,
     chunk_overlap: int = CHUNK_OVERLAP,
 ) -> InMemoryVectorStore:
-    """Load PDFs, create chunk embeddings, and return an indexed in-memory store."""
+    """Build an indexed in-memory vector store from local PDF files.
+
+    Args:
+        input_dir: Directory containing source PDF files.
+        chunk_size: Maximum number of characters per chunk.
+        chunk_overlap: Shared characters between consecutive chunks.
+
+    Returns:
+        InMemoryVectorStore: Vector store populated with embedded chunks.
+    """
     logging.info("START PdfLoadingAndIndexing")
     runtime_config = _collect_pdf_runtime_config()
 

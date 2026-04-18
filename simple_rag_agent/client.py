@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: CLI client for invoking the simple RAG FastAPI endpoint.
 """
@@ -13,7 +13,14 @@ from urllib import request
 
 
 def format_response(response_payload: dict) -> str:
-    """Build a readable CLI output from API JSON response."""
+    """Format API JSON payload into a readable CLI string.
+
+    Args:
+        response_payload: Parsed JSON object returned by the API.
+
+    Returns:
+        str: Multi-line text ready to print on terminal.
+    """
     output_text = str(response_payload.get("output", "")).strip()
     retrieved_docs = response_payload.get("retrieved_docs", [])
 
@@ -40,7 +47,11 @@ def format_response(response_payload: dict) -> str:
 
 
 def main() -> None:
-    """Read user request from CLI and call the RAG API."""
+    """Parse CLI args, call the API endpoint, and print formatted output.
+
+    Returns:
+        None: This function prints the final result to stdout.
+    """
     parser = argparse.ArgumentParser(description="Simple RAG API client.")
     parser.add_argument("request", type=str, help="Prompt text to send to the API.")
     parser.add_argument(
@@ -59,6 +70,7 @@ def main() -> None:
         method="POST",
     )
 
+    # Keep a generous timeout to support slower model responses.
     with request.urlopen(http_request, timeout=120) as response:  # nosec B310
         body = response.read().decode("utf-8")
 

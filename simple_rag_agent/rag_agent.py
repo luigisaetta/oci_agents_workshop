@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Minimal two-step LangGraph RAG agent using OCI embeddings and LLM.
 """
@@ -33,7 +33,15 @@ class RagState(TypedDict, total=False):
 
 
 def _collect_rag_runtime_config() -> Dict[str, str]:
-    """Collect runtime config and require simple RAG specific variables."""
+    """Collect runtime settings required by the simple RAG pipeline.
+
+    Returns:
+        Dict[str, str]: OCI runtime settings enriched with embedding model id
+            and retrieval top-k value.
+
+    Raises:
+        ValueError: If required environment variables are missing or invalid.
+    """
     runtime_config = collect_oci_runtime_config()
     embed_model_id = os.getenv("OCI_EMBED_MODEL_ID", "").strip()
     if not embed_model_id:
@@ -55,7 +63,14 @@ def _collect_rag_runtime_config() -> Dict[str, str]:
 def build_initialized_vector_store(
     vector_store: InMemoryVectorStore | None = None,
 ) -> InMemoryVectorStore:
-    """Create and index the vector store once using current runtime config."""
+    """Create and index a vector store with fake knowledge base documents.
+
+    Args:
+        vector_store: Optional pre-built vector store to reuse.
+
+    Returns:
+        InMemoryVectorStore: Indexed vector store ready for similarity search.
+    """
     logging.info("START VectorStoreLoadingAndIndexing")
     runtime_config = _collect_rag_runtime_config()
     embedding_client = build_embedding_client(runtime_config)
@@ -80,7 +95,16 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
         self._vector_store = vector_store or build_initialized_vector_store()
 
     def invoke(self, state: RagState, _config: Any = None, **_kwargs: Any) -> RagState:
-        """Retrieve top relevant documents for the user request."""
+        """Retrieve top relevant documents for the user request.
+
+        Args:
+            state: Input graph state containing at least ``user_input``.
+            _config: Optional LangGraph runtime config, unused.
+            **_kwargs: Extra LangGraph invocation arguments, unused.
+
+        Returns:
+            RagState: Updated state including runtime config and retrieved docs.
+        """
         logging.info("START SemanticSearcher")
 
         runtime_config = _collect_rag_runtime_config()
@@ -103,12 +127,22 @@ class AnswerGenerator(RunnableSerializable[RagState, RagState]):
     """Step 2: generate final answer from retrieved documents."""
 
     def invoke(self, state: RagState, _config: Any = None, **_kwargs: Any) -> RagState:
-        """Build prompt from context and invoke LLM."""
+        """Generate the final answer from retrieved document context.
+
+        Args:
+            state: Input graph state containing user input and retrieved docs.
+            _config: Optional LangGraph runtime config, unused.
+            **_kwargs: Extra LangGraph invocation arguments, unused.
+
+        Returns:
+            RagState: Updated state with final answer and document metadata.
+        """
         logging.info("START AnswerGenerator")
 
         runtime_config = state.get("runtime_config", _collect_rag_runtime_config())
         llm = build_llm(runtime_config)
 
+        # Flatten retrieved document content into a single context string.
         context = "\n\n".join(document.page_content for document in state["documents"])
         prompt = build_answer_prompt(user_input=state["user_input"], context=context)
         response = llm.invoke(prompt)
@@ -125,7 +159,14 @@ class AnswerGenerator(RunnableSerializable[RagState, RagState]):
 
 
 def build_rag_graph(vector_store: InMemoryVectorStore | None = None):
-    """Build and compile the simple two-step RAG graph."""
+    """Build and compile the simple two-step RAG graph.
+
+    Args:
+        vector_store: Optional pre-built vector store used by search step.
+
+    Returns:
+        Any: Compiled LangGraph runnable.
+    """
     graph_builder = StateGraph(RagState)
     graph_builder.add_node(
         "semantic_searcher",
@@ -144,7 +185,15 @@ def run_rag_agent(
     user_input: str,
     vector_store: InMemoryVectorStore | None = None,
 ) -> Dict[str, Any]:
-    """Run the simple RAG graph and return a JSON-compatible output."""
+    """Run the RAG graph and return a JSON-compatible payload.
+
+    Args:
+        user_input: Natural language query from the caller.
+        vector_store: Optional pre-built vector store for retrieval.
+
+    Returns:
+        Dict[str, Any]: Dictionary with model output and retrieved docs metadata.
+    """
     graph = build_rag_graph(vector_store=vector_store)
 
     # here we call the agent

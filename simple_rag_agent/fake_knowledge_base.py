@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-18
 License: MIT
 Description: Fake knowledge base documents used by the simple in-memory RAG example.
 """
@@ -26,7 +26,11 @@ FAKE_KNOWLEDGE_BASE_TEXTS = [
 
 
 def build_fake_documents() -> List[Document]:
-    """Build LangChain documents from the fake knowledge base texts."""
+    """Build LangChain documents from static knowledge base strings.
+
+    Returns:
+        List[Document]: Documents with page content and source metadata.
+    """
     documents: List[Document] = []
     for index, text in enumerate(FAKE_KNOWLEDGE_BASE_TEXTS, start=1):
         documents.append(
