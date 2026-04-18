@@ -16,16 +16,18 @@ These instructions apply to all future code changes in this repository.
    - `License: MIT`
    - `Description` with a brief summary
 8. Write clear docstrings in English for public modules, classes, functions, and methods; include `Args`, `Returns`, and `Raises` sections when applicable.
-9. After every code change, run `black` for formatting.
-10. After formatting, run `pylint`.
-11. Check and fix all `pylint` warnings/errors for touched files.
+9. When reusable functions are identified during development, move them into appropriate modules under `common` instead of duplicating logic across scripts.
+10. After every code change, run `black` for formatting.
+11. After formatting, run `pylint`.
+12. Check and fix all `pylint` warnings/errors for touched files.
 
 ## Standard Workflow
 
 1. Write or update the code, keeping it simple.
-2. Add or update docstrings to keep code intent, inputs, and outputs clear.
-3. For significant changes, add or update `pytest` tests in `tests`.
-4. Run `pytest` from the root folder.
-5. Run `black`.
-6. Run `pylint`.
-7. Fix all `pylint` issues in touched files.
+2. Extract reusable functions into appropriate modules under `common`.
+3. Add or update docstrings to keep code intent, inputs, and outputs clear.
+4. For significant changes, add or update `pytest` tests in `tests`.
+5. Run `pytest` from the root folder.
+6. Run `black`.
+7. Run `pylint`.
+8. Fix all `pylint` issues in touched files.
