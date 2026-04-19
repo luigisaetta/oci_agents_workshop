@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is inspired by Keep a Changelog and uses semantic sections.
 
-## [Unreleased]
+## [2026-04-19]
 
 ### Added
 - Next.js web client example in `apps/simple_rag_web` for calling the Simple RAG HTTP API.
