@@ -20,7 +20,7 @@ enterprise-oriented serving patterns.
 
 ### 1. Set required IAM policies
 
-Before running the examples, create a dedicated compartment for this workshop and
+Before running the examples, create a dedicated OCI compartment for this workshop and
 configure IAM policies for your user group.
 These policies must be set by a Tenant Admin.
 
