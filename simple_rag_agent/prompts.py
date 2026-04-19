@@ -12,6 +12,8 @@ from typing import Any, Dict, Sequence
 QUERY_REWRITE_PROMPT_TEMPLATE = """You are a search query rewriter.
 Given the conversation history and the latest user request, rewrite the latest
 request as a standalone search query that is explicit and context-complete.
+Return only the standalone search query text.
+Do not add explanations, comments, labels, markdown, or any extra text.
 
 Conversation history:
 {history}

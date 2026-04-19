@@ -103,3 +103,33 @@ def extract_text(response: Any) -> str:
         return "".join(text_parts)
 
     return str(content)
+
+
+def sanitize_standalone_search_query(raw_text: str) -> str:
+    """Extract a single standalone search query from verbose rewrite output.
+
+    Args:
+        raw_text: Raw model output potentially containing labels or explanations.
+
+    Returns:
+        str: Clean single-line search query suitable for vector-store retrieval.
+    """
+    cleaned = raw_text.strip()
+    if not cleaned:
+        return ""
+
+    lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+    if not lines:
+        return ""
+
+    first_line = lines[0]
+    lower_line = first_line.lower()
+    prefix = "standalone search query:"
+    if lower_line.startswith(prefix):
+        first_line = first_line[len(prefix) :].strip()
+
+    if first_line.startswith(("'", '"')) and first_line.endswith(("'", '"')):
+        if len(first_line) >= 2:
+            first_line = first_line[1:-1].strip()
+
+    return first_line

@@ -21,6 +21,7 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 - Added UI-side conversation history tracking, forwarding `history` to backend API, and a sidebar button to clear history.
 - Upgraded `custom_rag_agent/rag_agent.py` with `stream_rag_agent_events` to stream LangGraph step updates, semantic retrieval results, and final LLM token chunks.
 - Updated `apps/custom_rag_web` to consume SSE events from `/invoke/stream`, show live step progress, render retrieved metadata in sidebar as soon as available, and stream final answer tokens in real time.
+- Hardened query-rewrite behavior in both `simple_rag_agent` and `custom_rag_agent` so standalone search queries exclude explanations/comments and keep only retrievable query text.
 
 ## [2026-04-18]
 

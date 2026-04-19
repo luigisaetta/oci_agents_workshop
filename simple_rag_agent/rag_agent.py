@@ -16,7 +16,11 @@ from langchain_core.runnables import RunnableSerializable
 from langchain_core.vectorstores import InMemoryVectorStore
 from langgraph.graph import END, StateGraph
 
-from common.utils import collect_oci_runtime_config, extract_text
+from common.utils import (
+    collect_oci_runtime_config,
+    extract_text,
+    sanitize_standalone_search_query,
+)
 from common.oci_models import build_embedding_client, build_llm
 from simple_rag_agent.fake_knowledge_base import build_fake_documents
 from simple_rag_agent.prompts import build_answer_prompt, build_query_rewrite_prompt
@@ -126,7 +130,9 @@ class QueryRewriter(RunnableSerializable[RagState, RagState]):
             user_input=state["user_input"],
             history=history,
         )
-        rewritten_query = extract_text(llm.invoke(rewrite_prompt)).strip()
+        rewritten_query = sanitize_standalone_search_query(
+            extract_text(llm.invoke(rewrite_prompt))
+        )
 
         updated_state = dict(state)
         updated_state["runtime_config"] = runtime_config
