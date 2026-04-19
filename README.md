@@ -16,6 +16,9 @@ Special attention is given to **DAC (Dedicated AI Cluster)** deployments and
 runtime configuration, so you can move from local experimentation to
 enterprise-oriented serving patterns.
 
+For a suggested end-to-end study sequence, see
+[LEARNING_PATH.md](./LEARNING_PATH.md).
+
 ## Quickstart
 
 ### 1. Set required IAM policies
