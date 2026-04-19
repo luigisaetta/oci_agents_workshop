@@ -11,6 +11,7 @@ venv/
 # Local environment files
 .env
 .env.local
+input_pdf/anb_annual_report2025.pdf
 
 # Node/Next.js artifacts
 node_modules/

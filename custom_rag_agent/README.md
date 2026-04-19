@@ -6,6 +6,10 @@ This folder contains a minimal LangGraph RAG example with three Runnable steps:
 - `SemanticSearcher`
 - `AnswerGenerator`
 
+Detailed implementation guide:
+
+- [IMPLEMENTATION.md](./IMPLEMENTATION.md)
+
 The API returns a JSON payload with two fields:
 
 - `output`
