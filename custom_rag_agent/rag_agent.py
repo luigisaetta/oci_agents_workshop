@@ -345,7 +345,9 @@ def stream_rag_agent_events(
                 "retrieved_docs": retrieved_docs,
             }
 
-    runtime_config = latest_state.get("runtime_config", _collect_rag_runtime_config())
+    runtime_config = latest_state.get("runtime_config")
+    if runtime_config is None:
+        runtime_config = _collect_rag_runtime_config()
     documents = latest_state.get("documents", [])
     retrieved_docs = _build_retrieved_docs(documents)
 

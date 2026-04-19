@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-18
+Date last modified: 2026-04-19
 License: MIT
 Description: Shared utility functions for OCI runtime config and stream output.
 """
@@ -8,6 +8,7 @@ Description: Shared utility functions for OCI runtime config and stream output.
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Dict, Iterable
 
 
@@ -122,14 +123,58 @@ def sanitize_standalone_search_query(raw_text: str) -> str:
     if not lines:
         return ""
 
-    first_line = lines[0]
-    lower_line = first_line.lower()
-    prefix = "standalone search query:"
-    if lower_line.startswith(prefix):
-        first_line = first_line[len(prefix) :].strip()
+    def _normalize_line(line: str) -> str:
+        normalized = line.strip()
+        normalized = re.sub(r"^[>\-\*\s]+", "", normalized)
+        normalized = re.sub(r"\*\*", "", normalized)
+        return normalized.strip()
 
-    if first_line.startswith(("'", '"')) and first_line.endswith(("'", '"')):
-        if len(first_line) >= 2:
-            first_line = first_line[1:-1].strip()
+    def _clean_candidate(candidate: str) -> str:
+        cleaned_candidate = candidate.strip()
+        cleaned_candidate = re.sub(
+            r"(?i)\b(context-complete explanation|explanation|reasoning|comment)\s*:\s*.*$",
+            "",
+            cleaned_candidate,
+        ).strip()
+        if cleaned_candidate.startswith(("'", '"')) and cleaned_candidate.endswith(
+            ("'", '"')
+        ):
+            if len(cleaned_candidate) >= 2:
+                cleaned_candidate = cleaned_candidate[1:-1].strip()
+        return cleaned_candidate
 
-    return first_line
+    for index, line in enumerate(lines):
+        normalized = _normalize_line(line)
+        if not normalized:
+            continue
+        lower_line = normalized.lower()
+        if lower_line.startswith("standalone search query:"):
+            after_colon = normalized.split(":", maxsplit=1)[1].strip()
+            candidate = _clean_candidate(after_colon)
+            if candidate:
+                return candidate
+            if index + 1 < len(lines):
+                next_line = _clean_candidate(_normalize_line(lines[index + 1]))
+                if next_line:
+                    return next_line
+
+    for line in lines:
+        normalized = _normalize_line(line)
+        if not normalized:
+            continue
+        lower_line = normalized.lower()
+        if lower_line.startswith(
+            (
+                "context-complete explanation:",
+                "explanation:",
+                "reasoning:",
+                "comment:",
+                "here is",
+            )
+        ):
+            continue
+        candidate = _clean_candidate(normalized)
+        if candidate:
+            return candidate
+
+    return ""
