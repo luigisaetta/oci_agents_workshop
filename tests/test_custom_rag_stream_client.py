@@ -31,7 +31,7 @@ def test_parse_sse_data_line_raises_on_invalid_json() -> None:
 
 
 def test_render_stream_event_for_retrieval_results() -> None:
-    """It should include retrieved document count in rendered output."""
+    """It should include count and first retrieved metadata in output."""
     text = render_stream_event(
         {
             "event": "retrieval_results",
@@ -39,4 +39,4 @@ def test_render_stream_event_for_retrieval_results() -> None:
         }
     )
 
-    assert text == "[retrieval_results] 2 documents"
+    assert text == '[retrieval_results] 2 documents, first={"source": "doc-1"}'

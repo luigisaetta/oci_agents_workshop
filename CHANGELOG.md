@@ -12,6 +12,7 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 - Added streaming endpoint `POST /invoke/stream` in `custom_rag_agent/api.py` using Server-Sent Events (SSE) for step-by-step agent progress.
 - Added `custom_rag_agent/stream_client.py` as a minimal Python CLI to test streaming events and token output.
 - Added streaming tests in `tests/test_custom_rag_stream_client.py` and new streaming coverage in `tests/test_custom_rag_agent.py` and `tests/test_custom_rag_api.py`.
+- Added `apps/custom_rag_web` as a dedicated Next.js streaming UI for `custom_rag_agent`.
 
 ### Changed
 - Added a configuration sidebar to `apps/simple_rag_web` with editable backend invoke URL.
@@ -19,6 +20,7 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 - Updated web client layout to place output below input and added loading spinner feedback during backend calls.
 - Added UI-side conversation history tracking, forwarding `history` to backend API, and a sidebar button to clear history.
 - Upgraded `custom_rag_agent/rag_agent.py` with `stream_rag_agent_events` to stream LangGraph step updates, semantic retrieval results, and final LLM token chunks.
+- Updated `apps/custom_rag_web` to consume SSE events from `/invoke/stream`, show live step progress, render retrieved metadata in sidebar as soon as available, and stream final answer tokens in real time.
 
 ## [2026-04-18]
 

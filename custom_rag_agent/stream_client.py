@@ -52,7 +52,13 @@ def render_stream_event(event_payload: dict[str, Any]) -> str:
 
     if event_type == "retrieval_results":
         docs = event_payload.get("retrieved_docs", [])
-        return f"[retrieval_results] {len(docs)} documents"
+        if not docs:
+            return "[retrieval_results] 0 documents"
+        first_doc = docs[0]
+        return (
+            f"[retrieval_results] {len(docs)} documents, "
+            f"first={json.dumps(first_doc, ensure_ascii=False)}"
+        )
 
     if event_type == "completed":
         return "\n[completed] response fully generated"
