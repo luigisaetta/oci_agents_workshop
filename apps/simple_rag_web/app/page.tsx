@@ -24,7 +24,7 @@ const FALLBACK_INVOKE_URL = "http://127.0.0.1:8000/invoke";
 
 export default function HomePage() {
   const [question, setQuestion] = useState(
-    "What is a Dedicated AI Cluster in OCI?"
+    "What are scaling laws?"
   );
   const defaultInvokeUrl = useMemo(() => {
     const explicitInvokeUrl = process.env.NEXT_PUBLIC_RAG_INVOKE_URL?.trim();

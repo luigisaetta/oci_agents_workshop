@@ -77,7 +77,7 @@ function parseSseDataLine(line: string): StreamEvent | null {
 
 export default function HomePage() {
   const [question, setQuestion] = useState(
-    "What is a Dedicated AI Cluster in OCI?"
+    "What are scaling laws?"
   );
 
   const defaultStreamUrl = useMemo(() => {
