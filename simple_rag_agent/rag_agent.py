@@ -19,7 +19,6 @@ from langgraph.graph import END, StateGraph
 from common.utils import (
     collect_oci_runtime_config,
     extract_text,
-    sanitize_standalone_search_query,
 )
 from common.oci_models import build_embedding_client, build_llm
 from simple_rag_agent.fake_knowledge_base import build_fake_documents
@@ -130,9 +129,7 @@ class QueryRewriter(RunnableSerializable[RagState, RagState]):
             user_input=state["user_input"],
             history=history,
         )
-        rewritten_query = sanitize_standalone_search_query(
-            extract_text(llm.invoke(rewrite_prompt))
-        )
+        rewritten_query = extract_text(llm.invoke(rewrite_prompt)).strip()
 
         updated_state = dict(state)
         updated_state["runtime_config"] = runtime_config

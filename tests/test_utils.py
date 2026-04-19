@@ -15,7 +15,6 @@ from common.utils import (
     collect_oci_runtime_config,
     print_oci_runtime_config,
     print_streamed_response,
-    sanitize_standalone_search_query,
 )
 
 
@@ -109,28 +108,3 @@ def test_print_streamed_response_prints_only_non_empty_chunks(capsys) -> None:
     assert "-------- Model Streaming Output --------" in captured.out
     assert "Hello Rome" in captured.out
     assert captured.out.rstrip().endswith("---")
-
-
-def test_sanitize_standalone_search_query_with_inline_explanation() -> None:
-    """It should remove explanation suffix after standalone query label."""
-    raw_text = (
-        '**Standalone search query:** "Is Oracle Open Agent Spec open source?" '
-        "**Context-complete explanation:** This should be ignored."
-    )
-
-    result = sanitize_standalone_search_query(raw_text)
-
-    assert result == "Is Oracle Open Agent Spec open source?"
-
-
-def test_sanitize_standalone_search_query_with_query_on_next_line() -> None:
-    """It should extract query from the line after an empty label line."""
-    raw_text = (
-        "Standalone search query:\n"
-        '"What is the licensing model and availability?"\n'
-        "Context-complete explanation: Not needed for retrieval."
-    )
-
-    result = sanitize_standalone_search_query(raw_text)
-
-    assert result == "What is the licensing model and availability?"

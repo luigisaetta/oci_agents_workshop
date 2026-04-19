@@ -8,7 +8,6 @@ Description: Shared utility functions for OCI runtime config and stream output.
 from __future__ import annotations
 
 import os
-import re
 from typing import Any, Dict, Iterable
 
 
@@ -104,77 +103,3 @@ def extract_text(response: Any) -> str:
         return "".join(text_parts)
 
     return str(content)
-
-
-def sanitize_standalone_search_query(raw_text: str) -> str:
-    """Extract a single standalone search query from verbose rewrite output.
-
-    Args:
-        raw_text: Raw model output potentially containing labels or explanations.
-
-    Returns:
-        str: Clean single-line search query suitable for vector-store retrieval.
-    """
-    cleaned = raw_text.strip()
-    if not cleaned:
-        return ""
-
-    lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
-    if not lines:
-        return ""
-
-    def _normalize_line(line: str) -> str:
-        normalized = line.strip()
-        normalized = re.sub(r"^[>\-\*\s]+", "", normalized)
-        normalized = re.sub(r"\*\*", "", normalized)
-        return normalized.strip()
-
-    def _clean_candidate(candidate: str) -> str:
-        cleaned_candidate = candidate.strip()
-        cleaned_candidate = re.sub(
-            r"(?i)\b(context-complete explanation|explanation|reasoning|comment)\s*:\s*.*$",
-            "",
-            cleaned_candidate,
-        ).strip()
-        if cleaned_candidate.startswith(("'", '"')) and cleaned_candidate.endswith(
-            ("'", '"')
-        ):
-            if len(cleaned_candidate) >= 2:
-                cleaned_candidate = cleaned_candidate[1:-1].strip()
-        return cleaned_candidate
-
-    for index, line in enumerate(lines):
-        normalized = _normalize_line(line)
-        if not normalized:
-            continue
-        lower_line = normalized.lower()
-        if lower_line.startswith("standalone search query:"):
-            after_colon = normalized.split(":", maxsplit=1)[1].strip()
-            candidate = _clean_candidate(after_colon)
-            if candidate:
-                return candidate
-            if index + 1 < len(lines):
-                next_line = _clean_candidate(_normalize_line(lines[index + 1]))
-                if next_line:
-                    return next_line
-
-    for line in lines:
-        normalized = _normalize_line(line)
-        if not normalized:
-            continue
-        lower_line = normalized.lower()
-        if lower_line.startswith(
-            (
-                "context-complete explanation:",
-                "explanation:",
-                "reasoning:",
-                "comment:",
-                "here is",
-            )
-        ):
-            continue
-        candidate = _clean_candidate(normalized)
-        if candidate:
-            return candidate
-
-    return ""

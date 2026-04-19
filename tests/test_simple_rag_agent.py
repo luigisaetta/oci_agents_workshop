@@ -54,17 +54,6 @@ class _FakeRewriteLlm:
         return "rewritten standalone query"
 
 
-class _FakeVerboseRewriteLlm:
-    """Fake LLM returning extra narrative after the standalone query."""
-
-    def invoke(self, _prompt: str) -> Any:
-        """Return verbose rewrite output with explanation text."""
-        return (
-            'Standalone search query: "Is Oracle Open Agent Spec open source?"\n'
-            "Context-complete explanation: Additional details not for search."
-        )
-
-
 class _FakeVectorStore:
     """Minimal vector store implementing only similarity_search."""
 
@@ -198,27 +187,6 @@ def test_query_rewriter_rewrites_query_when_history_is_present(monkeypatch) -> N
     )
 
     assert result["search_query"] == "rewritten standalone query"
-
-
-def test_query_rewriter_strips_explanation_from_verbose_output(monkeypatch) -> None:
-    """It should keep only the standalone query when model adds extra text."""
-    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
-    monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
-    monkeypatch.setattr(
-        rag_agent,
-        "build_llm",
-        lambda _runtime_config: _FakeVerboseRewriteLlm(),
-    )
-
-    step = rag_agent.QueryRewriter()
-    result = step.invoke(
-        {
-            "user_input": "Is it open source?",
-            "history": [{"role": "user", "content": "Oracle Open Agent Spec status?"}],
-        }
-    )
-
-    assert result["search_query"] == "Is Oracle Open Agent Spec open source?"
 
 
 def test_answer_generator_returns_output(monkeypatch) -> None:
