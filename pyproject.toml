@@ -31,4 +31,4 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["common", "quickstart", "simple_rag_agent"]
+packages = ["common", "quickstart", "simple_rag_agent", "custom_rag_agent"]

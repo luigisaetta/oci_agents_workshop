@@ -8,6 +8,7 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 
 ### Added
 - Next.js web client example in `apps/simple_rag_web` for calling the Simple RAG HTTP API.
+- Added `custom_rag_agent/` as a full baseline clone of `simple_rag_agent/`, including copied local `.env` and mirrored `tests/test_custom_*.py` for safe incremental evolution.
 
 ### Changed
 - Added a configuration sidebar to `apps/simple_rag_web` with editable backend invoke URL.
