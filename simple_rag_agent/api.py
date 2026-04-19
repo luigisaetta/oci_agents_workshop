@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-18
+Date last modified: 2026-04-19
 License: MIT
 Description: FastAPI server exposing the simple RAG agent over HTTP.
 """
@@ -16,7 +16,7 @@ from typing import Any, List
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from simple_rag_agent.pdf_loader import build_pdf_vector_store, list_pdf_files
 from simple_rag_agent.rag_agent import build_initialized_vector_store, run_rag_agent
@@ -76,9 +76,11 @@ class InvokeRequest(BaseModel):
 
     Attributes:
         request: User question sent to the RAG pipeline.
+        history: Optional previous conversation messages.
     """
 
     request: str
+    history: List[dict[str, str]] = Field(default_factory=list)
 
 
 class InvokeResponse(BaseModel):
@@ -106,6 +108,7 @@ def invoke_agent(payload: InvokeRequest, request: Request) -> InvokeResponse:
     """
     result = run_rag_agent(
         payload.request,
+        history=payload.history,
         vector_store=request.app.state.vector_store,
     )
     return InvokeResponse(

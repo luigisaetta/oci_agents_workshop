@@ -1,8 +1,8 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-18
+Date last modified: 2026-04-19
 License: MIT
-Description: Minimal two-step LangGraph RAG agent using OCI embeddings and LLM.
+Description: Minimal three-step LangGraph RAG agent with query rewrite support.
 """
 
 from __future__ import annotations
@@ -19,14 +19,16 @@ from langgraph.graph import END, StateGraph
 from common.utils import collect_oci_runtime_config, extract_text
 from common.oci_models import build_embedding_client, build_llm
 from simple_rag_agent.fake_knowledge_base import build_fake_documents
-from simple_rag_agent.prompts import build_answer_prompt
+from simple_rag_agent.prompts import build_answer_prompt, build_query_rewrite_prompt
 
 
 class RagState(TypedDict, total=False):
     """State shared by all RAG graph steps."""
 
     user_input: str
+    history: List[Dict[str, str]]
     runtime_config: Dict[str, str]
+    search_query: str
     documents: List[Document]
     retrieved_docs: List[Dict[str, Any]]
     output: str
@@ -93,8 +95,50 @@ def build_initialized_vector_store(
 
 
 # pylint: disable=too-few-public-methods
+class QueryRewriter(RunnableSerializable[RagState, RagState]):
+    """Step 1: rewrite retrieval query using conversation history."""
+
+    def invoke(self, state: RagState, _config: Any = None, **_kwargs: Any) -> RagState:
+        """Rewrite query if history exists, otherwise keep original user input.
+
+        Args:
+            state: Input graph state containing user input and optional history.
+            _config: Optional LangGraph runtime config, unused.
+            **_kwargs: Extra LangGraph invocation arguments, unused.
+
+        Returns:
+            RagState: Updated state including runtime config and search query.
+        """
+        logging.info("START QueryRewriter")
+        runtime_config = _collect_rag_runtime_config()
+        history = state.get("history", [])
+
+        if not history:
+            logging.info("No history provided; using raw user input for retrieval.")
+            updated_state: RagState = dict(state)
+            updated_state["runtime_config"] = runtime_config
+            updated_state["search_query"] = state["user_input"]
+            logging.info("END QueryRewriter")
+            return updated_state
+
+        llm = build_llm(runtime_config)
+        rewrite_prompt = build_query_rewrite_prompt(
+            user_input=state["user_input"],
+            history=history,
+        )
+        rewritten_query = extract_text(llm.invoke(rewrite_prompt)).strip()
+
+        updated_state = dict(state)
+        updated_state["runtime_config"] = runtime_config
+        updated_state["search_query"] = rewritten_query or state["user_input"]
+
+        logging.info("END QueryRewriter")
+        return updated_state
+
+
+# pylint: disable=too-few-public-methods
 class SemanticSearcher(RunnableSerializable[RagState, RagState]):
-    """Step 1: retrieve most relevant documents with semantic similarity."""
+    """Step 2: retrieve most relevant documents with semantic similarity."""
 
     def __init__(
         self,
@@ -117,8 +161,9 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
 
         runtime_config = _collect_rag_runtime_config()
         top_k = int(runtime_config["SIMPLE_RAG_TOP_K"])
+        search_query = state.get("search_query", state["user_input"])
         top_documents = self._vector_store.similarity_search(
-            state["user_input"],
+            search_query,
             k=top_k,
         )
 
@@ -132,7 +177,7 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
 
 # pylint: disable=too-few-public-methods
 class AnswerGenerator(RunnableSerializable[RagState, RagState]):
-    """Step 2: generate final answer from retrieved documents."""
+    """Step 3: generate final answer from retrieved documents."""
 
     def invoke(self, state: RagState, _config: Any = None, **_kwargs: Any) -> RagState:
         """Generate the final answer from retrieved document context.
@@ -167,7 +212,7 @@ class AnswerGenerator(RunnableSerializable[RagState, RagState]):
 
 
 def build_rag_graph(vector_store: InMemoryVectorStore | None = None):
-    """Build and compile the simple two-step RAG graph.
+    """Build and compile the simple three-step RAG graph.
 
     Args:
         vector_store: Optional pre-built vector store used by search step.
@@ -176,13 +221,15 @@ def build_rag_graph(vector_store: InMemoryVectorStore | None = None):
         Any: Compiled LangGraph runnable.
     """
     graph_builder = StateGraph(RagState)
+    graph_builder.add_node("query_rewriter", QueryRewriter())
     graph_builder.add_node(
         "semantic_searcher",
         SemanticSearcher(vector_store=vector_store),
     )
     graph_builder.add_node("answer_generator", AnswerGenerator())
 
-    graph_builder.set_entry_point("semantic_searcher")
+    graph_builder.set_entry_point("query_rewriter")
+    graph_builder.add_edge("query_rewriter", "semantic_searcher")
     graph_builder.add_edge("semantic_searcher", "answer_generator")
     graph_builder.add_edge("answer_generator", END)
 
@@ -191,12 +238,14 @@ def build_rag_graph(vector_store: InMemoryVectorStore | None = None):
 
 def run_rag_agent(
     user_input: str,
+    history: List[Dict[str, str]] | None = None,
     vector_store: InMemoryVectorStore | None = None,
 ) -> Dict[str, Any]:
     """Run the RAG graph and return a JSON-compatible payload.
 
     Args:
         user_input: Natural language query from the caller.
+        history: Optional list of prior conversation messages.
         vector_store: Optional pre-built vector store for retrieval.
 
     Returns:
@@ -205,7 +254,10 @@ def run_rag_agent(
     graph = build_rag_graph(vector_store=vector_store)
 
     # here we call the agent
-    result_state: RagState = graph.invoke({"user_input": user_input})
+    history_messages = history or []
+    result_state: RagState = graph.invoke(
+        {"user_input": user_input, "history": history_messages}
+    )
 
     return {
         "output": result_state["output"],

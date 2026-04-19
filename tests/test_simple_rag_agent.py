@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-18
+Date last modified: 2026-04-19
 License: MIT
 Description: Unit tests for the simple two-step LangGraph RAG agent.
 """
@@ -44,16 +44,28 @@ class _FakeLlm:
         return "fake answer"
 
 
+class _FakeRewriteLlm:
+    """Fake LLM used by query rewrite tests."""
+
+    def invoke(self, prompt: str) -> Any:
+        """Return deterministic rewritten query."""
+        if "Standalone search query:" not in prompt:
+            raise ValueError("Rewrite prompt was not provided.")
+        return "rewritten standalone query"
+
+
 class _FakeVectorStore:
     """Minimal vector store implementing only similarity_search."""
 
     def __init__(self, docs: list[Document]) -> None:
         self._docs = docs
+        self.last_query = ""
 
     def similarity_search(
-        self, _query: str, k: int = 4, **_kwargs: Any
+        self, query: str, k: int = 4, **_kwargs: Any
     ) -> list[Document]:
         """Return first k documents in deterministic order."""
+        self.last_query = query
         return self._docs[:k]
 
 
@@ -96,6 +108,25 @@ def test_semantic_searcher_returns_top_documents(monkeypatch) -> None:
     assert result["documents"][0].page_content == "d1"
 
 
+def test_semantic_searcher_uses_rewritten_search_query(monkeypatch) -> None:
+    """It should use search_query when available in state."""
+    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
+    monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
+
+    vector_store = _FakeVectorStore(
+        [Document(page_content="d1", metadata={"source": "a"})]
+    )
+    step = rag_agent.SemanticSearcher(vector_store=vector_store)
+    step.invoke(
+        {
+            "user_input": "original query",
+            "search_query": "rewritten standalone query",
+        }
+    )
+
+    assert vector_store.last_query == "rewritten standalone query"
+
+
 def test_semantic_searcher_applies_top_k_filter(monkeypatch) -> None:
     """It should limit retrieved documents to the configured top_k value."""
     monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
@@ -112,6 +143,50 @@ def test_semantic_searcher_applies_top_k_filter(monkeypatch) -> None:
 
     assert len(result["documents"]) == 2
     assert result["documents"][0].page_content == "doc-1"
+
+
+def test_query_rewriter_keeps_original_query_when_history_is_empty(
+    monkeypatch,
+) -> None:
+    """It should bypass rewrite when history is empty."""
+    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
+    monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
+    monkeypatch.setattr(
+        rag_agent,
+        "build_llm",
+        lambda _runtime_config: (_ for _ in ()).throw(
+            AssertionError("LLM must not be called for empty history.")
+        ),
+    )
+
+    step = rag_agent.QueryRewriter()
+    result = step.invoke({"user_input": "original query", "history": []})
+
+    assert result["search_query"] == "original query"
+
+
+def test_query_rewriter_rewrites_query_when_history_is_present(monkeypatch) -> None:
+    """It should produce a rewritten standalone query when history is provided."""
+    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
+    monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
+    monkeypatch.setattr(
+        rag_agent,
+        "build_llm",
+        lambda _runtime_config: _FakeRewriteLlm(),
+    )
+
+    step = rag_agent.QueryRewriter()
+    result = step.invoke(
+        {
+            "user_input": "What about pricing?",
+            "history": [
+                {"role": "user", "content": "Tell me about Dedicated AI Cluster"},
+                {"role": "assistant", "content": "It is OCI managed infrastructure."},
+            ],
+        }
+    )
+
+    assert result["search_query"] == "rewritten standalone query"
 
 
 def test_answer_generator_returns_output(monkeypatch) -> None:
