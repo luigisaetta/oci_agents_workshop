@@ -83,10 +83,12 @@ class InvokeRequest(BaseModel):
     Attributes:
         request: User question sent to the RAG pipeline.
         history: Optional previous conversation messages.
+        top_k: Optional request-level retrieval top_k override.
     """
 
     request: str
     history: List[dict[str, str]] = Field(default_factory=list)
+    top_k: int | None = Field(default=None, ge=1)
 
 
 class InvokeResponse(BaseModel):
@@ -130,6 +132,7 @@ def _stream_sse_events(
         payload.request,
         history=payload.history,
         vector_store=vector_store,
+        top_k=payload.top_k,
     ):
         yield _as_sse_data(event)
 
@@ -149,6 +152,7 @@ def invoke_agent(payload: InvokeRequest, request: Request) -> InvokeResponse:
         payload.request,
         history=payload.history,
         vector_store=request.app.state.vector_store,
+        top_k=payload.top_k,
     )
     return InvokeResponse(
         output=result["output"],

@@ -49,8 +49,57 @@ class RagStreamEvent(TypedDict, total=False):
     retrieved_docs: List[Dict[str, Any]]
 
 
-def _collect_rag_runtime_config() -> Dict[str, str]:
+def _extract_top_k_from_langgraph_config(config: Any) -> int | None:
+    """Extract request-level top_k override from LangGraph config.
+
+    Args:
+        config: LangGraph runnable config dictionary.
+
+    Returns:
+        int | None: Parsed positive integer top_k, if provided.
+
+    Raises:
+        ValueError: If ``configurable.top_k`` is present but invalid.
+    """
+    if not isinstance(config, dict):
+        return None
+    configurable = config.get("configurable")
+    if not isinstance(configurable, dict):
+        return None
+
+    top_k_raw = configurable.get("top_k")
+    if top_k_raw is None:
+        return None
+
+    try:
+        top_k_value = int(top_k_raw)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Set top_k as a positive integer.") from error
+
+    if top_k_value < 1:
+        raise ValueError("Set top_k as a positive integer.")
+    return top_k_value
+
+
+def _build_langgraph_config(top_k: int | None) -> Dict[str, Any] | None:
+    """Build LangGraph standard config with optional configurable top_k.
+
+    Args:
+        top_k: Optional request-level retrieval top_k override.
+
+    Returns:
+        Dict[str, Any] | None: Runnable config passed to LangGraph methods.
+    """
+    if top_k is None:
+        return None
+    return {"configurable": {"top_k": top_k}}
+
+
+def _collect_rag_runtime_config(top_k_override: int | None = None) -> Dict[str, str]:
     """Collect runtime settings required by the custom RAG pipeline.
+
+    Args:
+        top_k_override: Optional request-level top_k value.
 
     Returns:
         Dict[str, str]: OCI runtime settings enriched with embedding model id
@@ -64,13 +113,18 @@ def _collect_rag_runtime_config() -> Dict[str, str]:
     if not embed_model_id:
         raise ValueError("Set OCI_EMBED_MODEL_ID environment variable.")
 
-    top_k_raw = os.getenv("SIMPLE_RAG_TOP_K", "4").strip()
-    try:
-        top_k = int(top_k_raw)
-    except ValueError as error:
-        raise ValueError("Set SIMPLE_RAG_TOP_K as a positive integer.") from error
-    if top_k < 1:
-        raise ValueError("Set SIMPLE_RAG_TOP_K as a positive integer.")
+    if top_k_override is not None:
+        if top_k_override < 1:
+            raise ValueError("Set top_k as a positive integer.")
+        top_k = top_k_override
+    else:
+        top_k_raw = os.getenv("SIMPLE_RAG_TOP_K", "4").strip()
+        try:
+            top_k = int(top_k_raw)
+        except ValueError as error:
+            raise ValueError("Set SIMPLE_RAG_TOP_K as a positive integer.") from error
+        if top_k < 1:
+            raise ValueError("Set SIMPLE_RAG_TOP_K as a positive integer.")
 
     runtime_config["OCI_EMBED_MODEL_ID"] = embed_model_id
     runtime_config["SIMPLE_RAG_TOP_K"] = str(top_k)
@@ -137,7 +191,8 @@ class QueryRewriter(RunnableSerializable[RagState, RagState]):
             RagState: Updated state including runtime config and search query.
         """
         logging.info("START QueryRewriter")
-        runtime_config = _collect_rag_runtime_config()
+        top_k_override = _extract_top_k_from_langgraph_config(_config)
+        runtime_config = _collect_rag_runtime_config(top_k_override)
         history = state.get("history", [])
 
         if not history:
@@ -186,7 +241,11 @@ class SemanticSearcher(RunnableSerializable[RagState, RagState]):
         """
         logging.info("START SemanticSearcher")
 
-        runtime_config = _collect_rag_runtime_config()
+        top_k_override = _extract_top_k_from_langgraph_config(_config)
+        runtime_config = state.get(
+            "runtime_config",
+            _collect_rag_runtime_config(top_k_override),
+        )
         top_k = int(runtime_config["SIMPLE_RAG_TOP_K"])
         search_query = state.get("search_query", state["user_input"])
         top_documents = self._vector_store.similarity_search(
@@ -219,7 +278,11 @@ class AnswerGenerator(RunnableSerializable[RagState, RagState]):
         """
         logging.info("START AnswerGenerator")
 
-        runtime_config = state.get("runtime_config", _collect_rag_runtime_config())
+        top_k_override = _extract_top_k_from_langgraph_config(_config)
+        runtime_config = state.get(
+            "runtime_config",
+            _collect_rag_runtime_config(top_k_override),
+        )
         llm = build_llm(runtime_config)
 
         # Flatten retrieved document content into a single context string.
@@ -288,6 +351,7 @@ def stream_rag_agent_events(
     user_input: str,
     history: List[Dict[str, str]] | None = None,
     vector_store: InMemoryVectorStore | None = None,
+    top_k: int | None = None,
 ) -> Iterator[RagStreamEvent]:
     """Run the agent in streaming mode and emit structured incremental events.
 
@@ -295,12 +359,14 @@ def stream_rag_agent_events(
         user_input: Natural language query from the caller.
         history: Optional list of prior conversation messages.
         vector_store: Optional pre-built vector store for retrieval.
+        top_k: Optional request-level retrieval top_k override.
 
     Yields:
         RagStreamEvent: Progress, retrieval, token, and final completion events.
     """
     history_messages = history or []
     retrieval_graph = build_retrieval_graph(vector_store=vector_store)
+    langgraph_config = _build_langgraph_config(top_k)
 
     yield {
         "event": "step_started",
@@ -308,10 +374,17 @@ def stream_rag_agent_events(
         "message": "Running query rewrite.",
     }
 
-    latest_state: RagState = {"user_input": user_input, "history": history_messages}
+    latest_state: RagState = {
+        "user_input": user_input,
+        "history": history_messages,
+    }
     semantic_started = False
 
-    for update in retrieval_graph.stream(latest_state, stream_mode="updates"):
+    for update in retrieval_graph.stream(
+        latest_state,
+        config=langgraph_config,
+        stream_mode="updates",
+    ):
         if "query_rewriter" in update:
             node_state = update["query_rewriter"]
             latest_state.update(node_state)
@@ -344,7 +417,9 @@ def stream_rag_agent_events(
 
     runtime_config = latest_state.get("runtime_config")
     if runtime_config is None:
-        runtime_config = _collect_rag_runtime_config()
+        runtime_config = _collect_rag_runtime_config(
+            top_k_override=_extract_top_k_from_langgraph_config(langgraph_config),
+        )
     documents = latest_state.get("documents", [])
     retrieved_docs = _build_retrieved_docs(documents)
 
@@ -382,6 +457,7 @@ def run_rag_agent(
     user_input: str,
     history: List[Dict[str, str]] | None = None,
     vector_store: InMemoryVectorStore | None = None,
+    top_k: int | None = None,
 ) -> Dict[str, Any]:
     """Run the RAG graph and return a JSON-compatible payload.
 
@@ -389,16 +465,17 @@ def run_rag_agent(
         user_input: Natural language query from the caller.
         history: Optional list of prior conversation messages.
         vector_store: Optional pre-built vector store for retrieval.
+        top_k: Optional request-level retrieval top_k override.
 
     Returns:
         Dict[str, Any]: Dictionary with model output and retrieved docs metadata.
     """
     graph = build_rag_graph(vector_store=vector_store)
+    langgraph_config = _build_langgraph_config(top_k)
 
     history_messages = history or []
-    result_state: RagState = graph.invoke(
-        {"user_input": user_input, "history": history_messages}
-    )
+    initial_state: RagState = {"user_input": user_input, "history": history_messages}
+    result_state: RagState = graph.invoke(initial_state, config=langgraph_config)
 
     return {
         "output": result_state["output"],

@@ -92,9 +92,15 @@ class _FakeRetrievalGraph:
     def __init__(self, docs: list[Document]) -> None:
         self._docs = docs
 
-    def stream(self, _state: dict[str, Any], stream_mode: str = "updates"):
+    def stream(
+        self,
+        _state: dict[str, Any],
+        config: dict[str, Any] | None = None,
+        stream_mode: str = "updates",
+    ):
         """Yield two graph updates in the same shape returned by LangGraph."""
         assert stream_mode == "updates"
+        assert config is None
         yield {
             "query_rewriter": {
                 "search_query": "rewritten standalone query",
@@ -194,6 +200,27 @@ def test_semantic_searcher_applies_top_k_filter(monkeypatch) -> None:
     result = step.invoke({"user_input": "test query"})
 
     assert len(result["documents"]) == 2
+    assert result["documents"][0].page_content == "doc-1"
+
+
+def test_semantic_searcher_applies_request_top_k_override(monkeypatch) -> None:
+    """It should use request top_k override instead of environment value."""
+    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
+    monkeypatch.setenv("OCI_EMBED_MODEL_ID", "cohere.embed-english-v3.0")
+    monkeypatch.setenv("SIMPLE_RAG_TOP_K", "5")
+
+    documents = [
+        Document(page_content=f"doc-{index}", metadata={"source": f"s-{index}"})
+        for index in range(1, 7)
+    ]
+
+    step = rag_agent.SemanticSearcher(vector_store=_FakeVectorStore(documents))
+    result = step.invoke(
+        {"user_input": "test query"},
+        {"configurable": {"top_k": 3}},
+    )
+
+    assert len(result["documents"]) == 3
     assert result["documents"][0].page_content == "doc-1"
 
 
@@ -332,3 +359,83 @@ def test_stream_rag_agent_events_emits_progress_retrieval_and_tokens(
     completed_event = events[-1]
     assert completed_event["output"] == "fake stream"
     assert completed_event["retrieved_docs"] == [{"source": "doc-1"}]
+
+
+def test_run_rag_agent_passes_top_k_in_langgraph_config(monkeypatch) -> None:
+    """It should pass top_k through LangGraph standard runnable config."""
+
+    class _FakeGraph:
+        def invoke(self, state: dict[str, Any], config=None):
+            """Assert LangGraph invoke receives top_k in configurable config."""
+            assert state == {"user_input": "Explain DAC", "history": []}
+            assert config == {"configurable": {"top_k": 9}}
+            return {"output": "ok", "retrieved_docs": []}
+
+    monkeypatch.setattr(
+        rag_agent,
+        "build_rag_graph",
+        lambda vector_store=None: _FakeGraph(),
+    )
+
+    result = rag_agent.run_rag_agent("Explain DAC", top_k=9)
+
+    assert result == {"output": "ok", "retrieved_docs": []}
+
+
+def test_stream_rag_agent_events_passes_top_k_in_langgraph_config(monkeypatch) -> None:
+    """It should pass top_k through LangGraph config during retrieval streaming."""
+    docs = [Document(page_content="context text", metadata={"source": "doc-1"})]
+
+    class _FakeGraph:
+        def stream(
+            self, _state: dict[str, Any], config=None, stream_mode: str = "updates"
+        ):
+            """Assert retrieval stream receives top_k via runnable config."""
+            assert stream_mode == "updates"
+            assert config == {"configurable": {"top_k": 3}}
+            yield {
+                "query_rewriter": {
+                    "search_query": "rewritten standalone query",
+                    "runtime_config": {
+                        "OCI_MODEL_ID": "model-id",
+                        "OCI_REGION": "us-chicago-1",
+                        "OCI_SERVICE_ENDPOINT": "https://example.test",
+                        "OCI_COMPARTMENT_ID": "ocid1.compartment.oc1..example",
+                        "OCI_PROVIDER": "generic",
+                        "OCI_AUTH_TYPE": "API_KEY",
+                        "OCI_AUTH_PROFILE": "DEFAULT",
+                        "OCI_EMBED_MODEL_ID": "cohere.embed-english-v3.0",
+                        "SIMPLE_RAG_TOP_K": "3",
+                    },
+                }
+            }
+            yield {
+                "semantic_searcher": {
+                    "documents": docs,
+                    "runtime_config": {
+                        "OCI_MODEL_ID": "model-id",
+                        "OCI_REGION": "us-chicago-1",
+                        "OCI_SERVICE_ENDPOINT": "https://example.test",
+                        "OCI_COMPARTMENT_ID": "ocid1.compartment.oc1..example",
+                        "OCI_PROVIDER": "generic",
+                        "OCI_AUTH_TYPE": "API_KEY",
+                        "OCI_AUTH_PROFILE": "DEFAULT",
+                        "OCI_EMBED_MODEL_ID": "cohere.embed-english-v3.0",
+                        "SIMPLE_RAG_TOP_K": "3",
+                    },
+                }
+            }
+
+    monkeypatch.setattr(
+        rag_agent,
+        "build_retrieval_graph",
+        lambda vector_store=None: _FakeGraph(),
+    )
+    monkeypatch.setattr(
+        rag_agent,
+        "build_llm",
+        lambda _runtime_config: _FakeStreamLlm(),
+    )
+
+    events = list(rag_agent.stream_rag_agent_events("Explain DAC", top_k=3))
+    assert events[-1]["event"] == "completed"

@@ -95,6 +95,7 @@ export default function HomePage() {
   }, []);
 
   const [streamUrl, setStreamUrl] = useState(defaultStreamUrl);
+  const [topK, setTopK] = useState("4");
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [answer, setAnswer] = useState("");
   const [docs, setDocs] = useState<RetrievedDoc[]>([]);
@@ -131,10 +132,15 @@ export default function HomePage() {
     setIsLoading(true);
 
     const trimmedQuestion = question.trim();
+    const parsedTopK = Number.parseInt(topK, 10);
     const historySnapshot = [...history];
     resetRuntimePanels();
 
     try {
+      if (!Number.isInteger(parsedTopK) || parsedTopK < 1) {
+        throw new Error("top_k must be a positive integer.");
+      }
+
       const response = await fetch(streamUrl, {
         method: "POST",
         headers: {
@@ -143,7 +149,8 @@ export default function HomePage() {
         },
         body: JSON.stringify({
           request: trimmedQuestion,
-          history: historySnapshot
+          history: historySnapshot,
+          top_k: parsedTopK
         })
       });
 
@@ -254,6 +261,16 @@ export default function HomePage() {
             value={streamUrl}
             onChange={(event) => setStreamUrl(event.target.value)}
             placeholder="http://127.0.0.1:8000/invoke/stream"
+            required
+          />
+          <label htmlFor="top-k">top_k</label>
+          <input
+            id="top-k"
+            type="number"
+            min={1}
+            step={1}
+            value={topK}
+            onChange={(event) => setTopK(event.target.value)}
             required
           />
           <p className="history-indicator">History messages: {history.length}</p>
