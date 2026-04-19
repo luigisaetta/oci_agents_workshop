@@ -1,7 +1,8 @@
 # Custom RAG Agent
 
-This folder contains a minimal LangGraph RAG example with two Runnable steps:
+This folder contains a minimal LangGraph RAG example with three Runnable steps:
 
+- `QueryRewriter`
 - `SemanticSearcher`
 - `AnswerGenerator`
 
@@ -9,6 +10,9 @@ The API returns a JSON payload with two fields:
 
 - `output`
 - `retrieved_docs` (metadata only, including `source`, `title`, and `page` when available)
+
+The API also exposes `POST /invoke/stream` with Server-Sent Events (SSE),
+including step progress, retrieval results, token streaming, and completion.
 
 When the API starts, it loads and indexes PDF chunks from `input_pdf/` when
 available. If no PDF files are present, it falls back to the fake knowledge
@@ -54,4 +58,12 @@ Optional custom URL:
 
 ```bash
 python custom_rag_agent/client.py "Your question" --url http://127.0.0.1:8000/invoke
+```
+
+## Run the streaming client
+
+From project root:
+
+```bash
+python custom_rag_agent/stream_client.py "What is a Dedicated AI Cluster in OCI?"
 ```

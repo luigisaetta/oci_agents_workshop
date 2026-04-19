@@ -44,6 +44,15 @@ class _FakeLlm:
         return "fake answer"
 
 
+class _FakeStreamLlm:
+    """Fake LLM returning deterministic streaming tokens."""
+
+    def stream(self, _prompt: str):
+        """Yield a deterministic token stream."""
+        yield "fake "
+        yield "stream"
+
+
 class _FakeRewriteLlm:
     """Fake LLM used by query rewrite tests."""
 
@@ -75,6 +84,49 @@ class _ReusableVectorStore:
     def add_documents(self, _documents: list[Document]) -> list[str]:
         """Fail if fake seeding tries to mutate this external store."""
         raise AssertionError("External vector store must not be seeded with fake docs.")
+
+
+class _FakeRetrievalGraph:
+    """Graph stub returning deterministic LangGraph update events."""
+
+    def __init__(self, docs: list[Document]) -> None:
+        self._docs = docs
+
+    def stream(self, _state: dict[str, Any], stream_mode: str = "updates"):
+        """Yield two graph updates in the same shape returned by LangGraph."""
+        assert stream_mode == "updates"
+        yield {
+            "query_rewriter": {
+                "search_query": "rewritten standalone query",
+                "runtime_config": {
+                    "OCI_MODEL_ID": "model-id",
+                    "OCI_REGION": "us-chicago-1",
+                    "OCI_SERVICE_ENDPOINT": "https://example.test",
+                    "OCI_COMPARTMENT_ID": "ocid1.compartment.oc1..example",
+                    "OCI_PROVIDER": "generic",
+                    "OCI_AUTH_TYPE": "API_KEY",
+                    "OCI_AUTH_PROFILE": "DEFAULT",
+                    "OCI_EMBED_MODEL_ID": "cohere.embed-english-v3.0",
+                    "SIMPLE_RAG_TOP_K": "4",
+                },
+            }
+        }
+        yield {
+            "semantic_searcher": {
+                "documents": self._docs,
+                "runtime_config": {
+                    "OCI_MODEL_ID": "model-id",
+                    "OCI_REGION": "us-chicago-1",
+                    "OCI_SERVICE_ENDPOINT": "https://example.test",
+                    "OCI_COMPARTMENT_ID": "ocid1.compartment.oc1..example",
+                    "OCI_PROVIDER": "generic",
+                    "OCI_AUTH_TYPE": "API_KEY",
+                    "OCI_AUTH_PROFILE": "DEFAULT",
+                    "OCI_EMBED_MODEL_ID": "cohere.embed-english-v3.0",
+                    "SIMPLE_RAG_TOP_K": "4",
+                },
+            }
+        }
 
 
 def test_build_initialized_vector_store_reuses_external_store_as_is(
@@ -244,3 +296,39 @@ def test_collect_rag_runtime_config_requires_positive_integer_top_k(
         rag_agent.SemanticSearcher(vector_store=_FakeVectorStore([])).invoke(
             {"user_input": "test query"}
         )
+
+
+def test_stream_rag_agent_events_emits_progress_retrieval_and_tokens(
+    monkeypatch,
+) -> None:
+    """It should stream step updates, retrieval metadata, and answer tokens."""
+    docs = [Document(page_content="context text", metadata={"source": "doc-1"})]
+
+    monkeypatch.setattr(
+        rag_agent,
+        "build_retrieval_graph",
+        lambda vector_store=None: _FakeRetrievalGraph(docs),
+    )
+    monkeypatch.setattr(
+        rag_agent,
+        "build_llm",
+        lambda _runtime_config: _FakeStreamLlm(),
+    )
+
+    events = list(
+        rag_agent.stream_rag_agent_events(
+            "Explain DAC",
+            history=[{"role": "user", "content": "Previous"}],
+        )
+    )
+
+    event_types = [event["event"] for event in events]
+    assert "step_started" in event_types
+    assert "step_completed" in event_types
+    assert "retrieval_results" in event_types
+    assert "final_answer_token" in event_types
+    assert event_types[-1] == "completed"
+
+    completed_event = events[-1]
+    assert completed_event["output"] == "fake stream"
+    assert completed_event["retrieved_docs"] == [{"source": "doc-1"}]

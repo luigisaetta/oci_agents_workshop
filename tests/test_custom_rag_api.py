@@ -7,6 +7,7 @@ Description: Unit tests for the FastAPI endpoint exposing the custom RAG agent.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -125,3 +126,43 @@ def test_api_startup_uses_pdf_loader_when_pdf_files_exist(monkeypatch) -> None:
 
     assert response.status_code == 200
     assert response.json()["output"] == "from pdf store"
+
+
+def test_invoke_stream_endpoint_returns_sse_events(monkeypatch) -> None:
+    """It should expose SSE events for progressive streaming invocations."""
+    monkeypatch.setattr("custom_rag_agent.api.list_pdf_files", _fake_list_no_pdf_files)
+    monkeypatch.setattr(
+        "custom_rag_agent.api.build_initialized_vector_store",
+        _fake_build_initialized_vector_store,
+    )
+
+    def _fake_stream_events(_request: str, history=None, vector_store=None):
+        assert history == []
+        assert vector_store is not None
+        yield {"event": "step_started", "step": "query_rewriter"}
+        yield {"event": "retrieval_results", "retrieved_docs": [{"source": "doc-1"}]}
+        yield {"event": "final_answer_token", "token": "hello"}
+        yield {"event": "completed", "output": "hello", "retrieved_docs": []}
+
+    monkeypatch.setattr(
+        "custom_rag_agent.api.stream_rag_agent_events",
+        _fake_stream_events,
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/invoke/stream", json={"request": "hello"})
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+
+    payload_lines = [
+        line[len("data: ") :]
+        for line in response.text.splitlines()
+        if line.startswith("data: ")
+    ]
+    events = [json.loads(line) for line in payload_lines]
+
+    assert events[0]["event"] == "step_started"
+    assert events[1]["event"] == "retrieval_results"
+    assert events[2]["event"] == "final_answer_token"
+    assert events[-1]["event"] == "completed"

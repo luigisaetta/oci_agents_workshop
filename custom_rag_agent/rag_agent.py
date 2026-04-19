@@ -9,15 +9,15 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, TypedDict
+from typing import Any, Dict, Iterator, List, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnableSerializable
 from langchain_core.vectorstores import InMemoryVectorStore
 from langgraph.graph import END, StateGraph
 
-from common.utils import collect_oci_runtime_config, extract_text
 from common.oci_models import build_embedding_client, build_llm
+from common.utils import collect_oci_runtime_config, extract_text
 from custom_rag_agent.fake_knowledge_base import build_fake_documents
 from custom_rag_agent.prompts import build_answer_prompt, build_query_rewrite_prompt
 
@@ -32,6 +32,18 @@ class RagState(TypedDict, total=False):
     documents: List[Document]
     retrieved_docs: List[Dict[str, Any]]
     output: str
+
+
+class RagStreamEvent(TypedDict, total=False):
+    """Structured event emitted by the streaming RAG execution."""
+
+    event: str
+    step: str
+    message: str
+    search_query: str
+    token: str
+    output: str
+    retrieved_docs: List[Dict[str, Any]]
 
 
 def _collect_rag_runtime_config() -> Dict[str, str]:
@@ -60,6 +72,18 @@ def _collect_rag_runtime_config() -> Dict[str, str]:
     runtime_config["OCI_EMBED_MODEL_ID"] = embed_model_id
     runtime_config["SIMPLE_RAG_TOP_K"] = str(top_k)
     return runtime_config
+
+
+def _build_retrieved_docs(documents: List[Document]) -> List[Dict[str, Any]]:
+    """Convert retrieved LangChain documents into serializable metadata entries.
+
+    Args:
+        documents: Retrieved documents.
+
+    Returns:
+        List[Dict[str, Any]]: List of metadata dictionaries.
+    """
+    return [dict(document.metadata) for document in documents]
 
 
 def build_initialized_vector_store(
@@ -199,20 +223,40 @@ class AnswerGenerator(RunnableSerializable[RagState, RagState]):
         context = "\n\n".join(document.page_content for document in state["documents"])
         prompt = build_answer_prompt(user_input=state["user_input"], context=context)
         response = llm.invoke(prompt)
-        retrieved_docs: List[Dict[str, Any]] = []
-        for document in state["documents"]:
-            retrieved_docs.append(dict(document.metadata))
 
         updated_state: RagState = dict(state)
         updated_state["output"] = extract_text(response)
-        updated_state["retrieved_docs"] = retrieved_docs
+        updated_state["retrieved_docs"] = _build_retrieved_docs(state["documents"])
 
         logging.info("END AnswerGenerator")
         return updated_state
 
 
+def build_retrieval_graph(vector_store: InMemoryVectorStore | None = None):
+    """Build a graph containing only rewrite + semantic retrieval steps.
+
+    Args:
+        vector_store: Optional pre-built vector store used by search step.
+
+    Returns:
+        Any: Compiled LangGraph runnable.
+    """
+    graph_builder = StateGraph(RagState)
+    graph_builder.add_node("query_rewriter", QueryRewriter())
+    graph_builder.add_node(
+        "semantic_searcher",
+        SemanticSearcher(vector_store=vector_store),
+    )
+
+    graph_builder.set_entry_point("query_rewriter")
+    graph_builder.add_edge("query_rewriter", "semantic_searcher")
+    graph_builder.add_edge("semantic_searcher", END)
+
+    return graph_builder.compile()
+
+
 def build_rag_graph(vector_store: InMemoryVectorStore | None = None):
-    """Build and compile the simple three-step RAG graph.
+    """Build and compile the custom three-step RAG graph.
 
     Args:
         vector_store: Optional pre-built vector store used by search step.
@@ -236,6 +280,99 @@ def build_rag_graph(vector_store: InMemoryVectorStore | None = None):
     return graph_builder.compile()
 
 
+# pylint: disable=too-many-locals
+def stream_rag_agent_events(
+    user_input: str,
+    history: List[Dict[str, str]] | None = None,
+    vector_store: InMemoryVectorStore | None = None,
+) -> Iterator[RagStreamEvent]:
+    """Run the agent in streaming mode and emit structured incremental events.
+
+    Args:
+        user_input: Natural language query from the caller.
+        history: Optional list of prior conversation messages.
+        vector_store: Optional pre-built vector store for retrieval.
+
+    Yields:
+        RagStreamEvent: Progress, retrieval, token, and final completion events.
+    """
+    history_messages = history or []
+    retrieval_graph = build_retrieval_graph(vector_store=vector_store)
+
+    yield {
+        "event": "step_started",
+        "step": "query_rewriter",
+        "message": "Running query rewrite.",
+    }
+
+    latest_state: RagState = {"user_input": user_input, "history": history_messages}
+    semantic_started = False
+
+    for update in retrieval_graph.stream(latest_state, stream_mode="updates"):
+        if "query_rewriter" in update:
+            node_state = update["query_rewriter"]
+            latest_state.update(node_state)
+            yield {
+                "event": "step_completed",
+                "step": "query_rewriter",
+                "search_query": node_state.get("search_query", user_input),
+            }
+            if not semantic_started:
+                semantic_started = True
+                yield {
+                    "event": "step_started",
+                    "step": "semantic_searcher",
+                    "message": "Running semantic search.",
+                }
+
+        if "semantic_searcher" in update:
+            node_state = update["semantic_searcher"]
+            latest_state.update(node_state)
+            retrieved_docs = _build_retrieved_docs(node_state.get("documents", []))
+            yield {
+                "event": "step_completed",
+                "step": "semantic_searcher",
+                "retrieved_docs": retrieved_docs,
+            }
+            yield {
+                "event": "retrieval_results",
+                "retrieved_docs": retrieved_docs,
+            }
+
+    runtime_config = latest_state.get("runtime_config", _collect_rag_runtime_config())
+    documents = latest_state.get("documents", [])
+    retrieved_docs = _build_retrieved_docs(documents)
+
+    context = "\n\n".join(document.page_content for document in documents)
+    prompt = build_answer_prompt(user_input=user_input, context=context)
+
+    yield {
+        "event": "step_started",
+        "step": "answer_generator",
+        "message": "Generating final answer.",
+    }
+
+    llm = build_llm(runtime_config)
+    output_parts: List[str] = []
+    for chunk in llm.stream(prompt):
+        token = extract_text(chunk)
+        if token:
+            output_parts.append(token)
+            yield {"event": "final_answer_token", "token": token}
+
+    output_text = "".join(output_parts)
+
+    yield {
+        "event": "step_completed",
+        "step": "answer_generator",
+    }
+    yield {
+        "event": "completed",
+        "output": output_text,
+        "retrieved_docs": retrieved_docs,
+    }
+
+
 def run_rag_agent(
     user_input: str,
     history: List[Dict[str, str]] | None = None,
@@ -253,7 +390,6 @@ def run_rag_agent(
     """
     graph = build_rag_graph(vector_store=vector_store)
 
-    # here we call the agent
     history_messages = history or []
     result_state: RagState = graph.invoke(
         {"user_input": user_input, "history": history_messages}
