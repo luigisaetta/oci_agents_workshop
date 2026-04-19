@@ -13,6 +13,9 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 - Added `custom_rag_agent/stream_client.py` as a minimal Python CLI to test streaming events and token output.
 - Added streaming tests in `tests/test_custom_rag_stream_client.py` and new streaming coverage in `tests/test_custom_rag_agent.py` and `tests/test_custom_rag_api.py`.
 - Added `apps/custom_rag_web` as a dedicated Next.js streaming UI for `custom_rag_agent`.
+- Added `common/oci_openai_clients.py` with an OpenAI-compatible OCI client builder using `user_principal` authentication.
+- Added `quickstart/vector_store_search01.py` to run semantic vector store search via OpenAI SDK and return metadata compatible with `custom_rag_agent`.
+- Added unit tests `tests/test_openai_clients.py` and `tests/test_vector_store_search01.py`.
 
 ### Changed
 - Added a configuration sidebar to `apps/simple_rag_web` with editable backend invoke URL.
@@ -23,6 +26,8 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 - Updated `apps/custom_rag_web` to consume SSE events from `/invoke/stream`, show live step progress, render retrieved metadata in sidebar as soon as available, and stream final answer tokens in real time.
 - Hardened query-rewrite behavior in both `simple_rag_agent` and `custom_rag_agent` so standalone search queries exclude explanations/comments and keep only retrievable query text.
 - Simplified query-rewrite handling by removing post-processing sanitization and enforcing strict single-line standalone query output directly via prompt instructions.
+- Updated project dependencies to include `openai`, `httpx`, and `oci-genai-auth`.
+- Simplified OpenAI-compatible client implementation by removing control-plane-specific client code and optional import fallbacks.
 
 ## [2026-04-18]
 

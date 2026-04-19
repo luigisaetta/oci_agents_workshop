@@ -120,7 +120,12 @@ configuration and returns a streamed response, your OCI configuration is working
 ```bash
 python -m quickstart.agent01 "Explain what a Dedicated AI Cluster is in OCI."
 python -m quickstart.embedding01
+python -m quickstart.vector_store_search01 "What are scaling laws for LLMs?"
 ```
+
+`quickstart/vector_store_search01.py` uses the OpenAI SDK against OCI vector store
+APIs with `user_principal` authentication and returns retrieval metadata compatible
+with `custom_rag_agent`.
 
 ### 8. Run the web client (Next.js)
 
@@ -155,6 +160,8 @@ For LangChain/LangGraph development, a practical stack includes:
 
 - `langchain-oci`
 - `langchain-oracledb`
+- `openai` (for OpenAI-compatible OCI APIs, for example vector stores)
+- `oci-genai-auth` (for OCI `user_principal` authentication with OpenAI SDK)
 
 Useful references:
 - Main repository: [oracle/langchain-oracle](https://github.com/oracle/langchain-oracle)
