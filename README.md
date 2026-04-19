@@ -9,6 +9,7 @@ complex AI agents on OCI.
 This workshop includes:
 - quickstart programs for chat streaming, LangGraph orchestration, and embeddings;
 - a simple RAG agent exposed via FastAPI, with support for fake KB or local PDF ingestion;
+- a custom RAG agent with LangGraph step-by-step and token streaming output for real-time UI progress;
 - shared runtime/model utilities to keep OCI configuration consistent across examples.
 
 Special attention is given to **DAC (Dedicated AI Cluster)** deployments and
