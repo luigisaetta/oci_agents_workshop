@@ -147,6 +147,12 @@ input[type="url"]:focus {
   justify-content: flex-end;
 }
 
+.settings-actions {
+  justify-content: flex-start;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
 button {
   border: 0;
   border-radius: 12px;
@@ -169,6 +175,17 @@ button:hover:enabled {
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.secondary-button {
+  color: #204357;
+  background: linear-gradient(125deg, #d8e8f2, #bfd8e7);
+}
+
+.history-indicator {
+  margin: 0.7rem 0 0;
+  font-size: 0.86rem;
+  color: var(--text-subtle);
 }
 
 .answer-box {

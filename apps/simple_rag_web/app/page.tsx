@@ -15,6 +15,11 @@ type InvokeResponse = {
   retrieved_docs: RetrievedDoc[];
 };
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 const FALLBACK_INVOKE_URL = "http://127.0.0.1:8000/invoke";
 
 export default function HomePage() {
@@ -36,6 +41,7 @@ export default function HomePage() {
   }, []);
 
   const [invokeUrl, setInvokeUrl] = useState(defaultInvokeUrl);
+  const [history, setHistory] = useState<ChatMessage[]>([]);
   const [answer, setAnswer] = useState("");
   const [docs, setDocs] = useState<RetrievedDoc[]>([]);
   const [error, setError] = useState("");
@@ -45,6 +51,8 @@ export default function HomePage() {
     event.preventDefault();
     setError("");
     setIsLoading(true);
+    const trimmedQuestion = question.trim();
+    const historySnapshot = [...history];
 
     try {
       const response = await fetch(invokeUrl, {
@@ -52,7 +60,10 @@ export default function HomePage() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ request: question })
+        body: JSON.stringify({
+          request: trimmedQuestion,
+          history: historySnapshot
+        })
       });
 
       if (!response.ok) {
@@ -62,6 +73,11 @@ export default function HomePage() {
       const payload = (await response.json()) as InvokeResponse;
       setAnswer(payload.output || "");
       setDocs(payload.retrieved_docs || []);
+      setHistory([
+        ...historySnapshot,
+        { role: "user", content: trimmedQuestion },
+        { role: "assistant", content: payload.output || "" }
+      ]);
     } catch (submitError) {
       setAnswer("");
       setDocs([]);
@@ -98,13 +114,22 @@ export default function HomePage() {
             placeholder="http://127.0.0.1:8000/invoke"
             required
           />
-          <div className="actions">
+          <p className="history-indicator">History messages: {history.length}</p>
+          <div className="actions settings-actions">
             <button
               type="button"
               onClick={() => setInvokeUrl(defaultInvokeUrl)}
               disabled={invokeUrl === defaultInvokeUrl}
             >
               Reset URL
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setHistory([])}
+              disabled={history.length === 0}
+            >
+              Clear History
             </button>
           </div>
         </aside>
