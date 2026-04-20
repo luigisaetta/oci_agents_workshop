@@ -111,6 +111,12 @@ export default function HomePage() {
     setSearchQuery("");
   }
 
+  function clearChatOutput() {
+    setAnswer("");
+    setSearchQuery("");
+    setDocs([]);
+  }
+
   function updateStep(stepName: StepName, status: StepStatus, info: string) {
     setSteps((previous) =>
       previous.map((step) => {
@@ -277,10 +283,10 @@ export default function HomePage() {
           <div className="actions settings-actions">
             <button
               type="button"
-              onClick={() => setStreamUrl(defaultStreamUrl)}
-              disabled={streamUrl === defaultStreamUrl}
+              onClick={clearChatOutput}
+              disabled={!answer && !searchQuery && docs.length === 0}
             >
-              Reset URL
+              Clear Chat
             </button>
             <button
               type="button"
