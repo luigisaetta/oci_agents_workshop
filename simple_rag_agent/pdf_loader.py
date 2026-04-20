@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-18
+Date last modified: 2026-04-20
 License: MIT
 Description: Load PDFs from input_pdf, chunk text, and build embeddings for simple RAG.
 """
@@ -76,6 +76,7 @@ def load_pdf_documents(input_dir: Path) -> List[Document]:
 
     documents: List[Document] = []
     for pdf_path in pdf_paths:
+        logging.info("Processing PDF file: %s", pdf_path.name)
         reader = PdfReader(str(pdf_path))
         title = _resolve_pdf_title(reader, pdf_path)
         for page_number, page in enumerate(reader.pages, start=1):

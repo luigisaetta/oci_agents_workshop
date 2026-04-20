@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-17
+Date last modified: 2026-04-20
 License: MIT
 Description: Unit tests for PDF loading, chunking, and embedding pipeline.
 """
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 # pylint: disable=too-few-public-methods,missing-function-docstring
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -32,7 +33,7 @@ class _FakeEmbeddingClient:
 
 
 def test_load_pdf_documents_sets_source_title_and_page(
-    monkeypatch, tmp_path: Path
+    monkeypatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """It should map PDF pages to documents with source/title/page metadata."""
 
@@ -56,12 +57,14 @@ def test_load_pdf_documents_sets_source_title_and_page(
 
     monkeypatch.setattr(pdf_loader, "PdfReader", _FakeReader)
 
+    caplog.set_level(logging.INFO)
     documents = pdf_loader.load_pdf_documents(tmp_path)
 
     assert len(documents) == 2
     assert documents[0].metadata["source"] == "sample.pdf"
     assert documents[0].metadata["title"] == "My PDF Title"
     assert documents[0].metadata["page"] == 1
+    assert "Processing PDF file: sample.pdf" in caplog.text
 
 
 def test_chunk_documents_splits_long_text() -> None:

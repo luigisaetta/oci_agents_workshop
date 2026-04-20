@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is inspired by Keep a Changelog and uses semantic sections.
 
+## [2026-04-20]
+
+### Changed
+- Added PDF filename logging at document-loading startup in both `simple_rag_agent/pdf_loader.py` and `custom_rag_agent/pdf_loader.py`.
+- Simplified embedding-stage logging by removing per-batch filename logs while keeping progress bar behavior unchanged.
+- Updated PDF loader tests in `tests/test_pdf_loader.py` and `tests/test_custom_pdf_loader.py` to reflect the simplified logging behavior.
+
 ## [2026-04-19]
 
 ### Added
