@@ -75,6 +75,28 @@ function parseSseDataLine(line: string): StreamEvent | null {
   }
 }
 
+function buildPdfOpenUrl(
+  streamEndpointUrl: string,
+  source?: string,
+  page?: number | string
+): string | null {
+  const sourceName = (source || "").trim();
+  if (!sourceName) {
+    return null;
+  }
+
+  try {
+    const endpointUrl = new URL(streamEndpointUrl);
+    const pageNumber = Number.parseInt(String(page ?? ""), 10);
+    const pageAnchor = Number.isInteger(pageNumber) && pageNumber > 0
+      ? `#page=${pageNumber}`
+      : "";
+    return `${endpointUrl.origin}/pdf/${encodeURIComponent(sourceName)}${pageAnchor}`;
+  } catch {
+    return null;
+  }
+}
+
 export default function HomePage() {
   const [question, setQuestion] = useState(
     "What are scaling laws?"
@@ -316,22 +338,32 @@ export default function HomePage() {
             <p className="empty-state">No documents retrieved yet.</p>
           ) : (
             <ul className="doc-list sidebar-doc-list">
-              {docs.map((doc, index) => (
-                <li key={`${doc.source || "doc"}-${index}`}>
-                  <span className="doc-index">{index + 1}</span>
-                  <div>
-                    <p>
-                      <strong>Source:</strong> {doc.source || "unknown"}
-                    </p>
-                    <p>
-                      <strong>Title:</strong> {doc.title || "n/a"}
-                    </p>
-                    <p>
-                      <strong>Page:</strong> {doc.page ?? "n/a"}
-                    </p>
-                  </div>
-                </li>
-              ))}
+              {docs.map((doc, index) => {
+                const pdfUrl = buildPdfOpenUrl(streamUrl, doc.source, doc.page);
+                return (
+                  <li key={`${doc.source || "doc"}-${index}`}>
+                    <span className="doc-index">{index + 1}</span>
+                    <div>
+                      <p>
+                        <strong>Source:</strong>{" "}
+                        {pdfUrl ? (
+                          <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                            {doc.source || "unknown"}
+                          </a>
+                        ) : (
+                          doc.source || "unknown"
+                        )}
+                      </p>
+                      <p>
+                        <strong>Title:</strong> {doc.title || "n/a"}
+                      </p>
+                      <p>
+                        <strong>Page:</strong> {doc.page ?? "n/a"}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </aside>

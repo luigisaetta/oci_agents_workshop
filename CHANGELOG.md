@@ -15,6 +15,7 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 - Simplified embedding-stage logging by removing per-batch filename logs while keeping progress bar behavior unchanged.
 - Updated PDF loader tests in `tests/test_pdf_loader.py` and `tests/test_custom_pdf_loader.py` to reflect the simplified logging behavior.
 - Updated `quickstart/README.md` with `responses01.py` usage and required environment variables.
+- Added `GET /pdf/{file_name}` in `custom_rag_agent/api.py` and linked retrieved document sources in `apps/custom_rag_web` to open source PDFs in a new browser tab at the referenced page (`#page=N`) when available.
 
 ## [2026-04-19]
 

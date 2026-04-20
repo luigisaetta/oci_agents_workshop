@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-19
+Date last modified: 2026-04-20
 License: MIT
 Description: Unit tests for the FastAPI endpoint exposing the custom RAG agent.
 """
@@ -10,9 +10,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from custom_rag_agent.api import app
+from custom_rag_agent.api import app, get_source_pdf
 
 
 def _fake_run_rag_agent(
@@ -242,3 +244,46 @@ def test_invoke_stream_endpoint_forwards_top_k(monkeypatch) -> None:
     ]
     events = [json.loads(line) for line in payload_lines]
     assert events[-1]["event"] == "completed"
+
+
+def test_get_source_pdf_returns_file(monkeypatch, tmp_path: Path) -> None:
+    """It should return PDF binary content for an existing file name."""
+    pdf_path = tmp_path / "sample.pdf"
+    pdf_bytes = b"%PDF-1.4\nsample\n"
+    pdf_path.write_bytes(pdf_bytes)
+
+    monkeypatch.setattr("custom_rag_agent.api.get_input_pdf_dir", lambda: tmp_path)
+    monkeypatch.setattr("custom_rag_agent.api.list_pdf_files", _fake_list_no_pdf_files)
+    monkeypatch.setattr(
+        "custom_rag_agent.api.build_initialized_vector_store",
+        _fake_build_initialized_vector_store,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/pdf/sample.pdf")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.content == pdf_bytes
+
+
+def test_get_source_pdf_returns_not_found_for_missing_file(monkeypatch) -> None:
+    """It should return 404 when requested PDF file is not available."""
+    monkeypatch.setattr("custom_rag_agent.api.list_pdf_files", _fake_list_no_pdf_files)
+    monkeypatch.setattr(
+        "custom_rag_agent.api.build_initialized_vector_store",
+        _fake_build_initialized_vector_store,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/pdf/missing.pdf")
+
+    assert response.status_code == 404
+
+
+def test_get_source_pdf_rejects_path_traversal_name() -> None:
+    """It should reject non-basename file names in direct handler calls."""
+    with pytest.raises(HTTPException) as exc_info:
+        get_source_pdf("../secret.pdf")
+
+    assert exc_info.value.status_code == 400

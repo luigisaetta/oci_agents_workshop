@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-19
+Date last modified: 2026-04-20
 License: MIT
 Description: FastAPI server exposing the custom RAG agent over HTTP.
 """
@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import Any, Iterator, List
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from custom_rag_agent.pdf_loader import build_pdf_vector_store, list_pdf_files
@@ -46,7 +46,7 @@ async def lifespan(app_instance: FastAPI):
     Yields:
         None: Control is handed back to FastAPI for app serving.
     """
-    input_dir = Path(__file__).resolve().parent.parent / "input_pdf"
+    input_dir = get_input_pdf_dir()
     pdf_files = list_pdf_files(input_dir)
 
     # Prefer PDF-backed retrieval when local source documents are available.
@@ -101,6 +101,15 @@ class InvokeResponse(BaseModel):
 
     output: str
     retrieved_docs: List[dict[str, Any]]
+
+
+def get_input_pdf_dir() -> Path:
+    """Return absolute path of the local PDF input directory.
+
+    Returns:
+        Path: Absolute directory path used to store source PDFs.
+    """
+    return Path(__file__).resolve().parent.parent / "input_pdf"
 
 
 def _as_sse_data(payload: dict[str, Any]) -> str:
@@ -181,3 +190,27 @@ def invoke_agent_stream(payload: InvokeRequest, request: Request) -> StreamingRe
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.get("/pdf/{file_name}")
+def get_source_pdf(file_name: str) -> FileResponse:
+    """Serve a source PDF file from the input directory.
+
+    Args:
+        file_name: PDF file name (basename only, no directory separators).
+
+    Returns:
+        FileResponse: Binary PDF content suitable for browser rendering.
+
+    Raises:
+        HTTPException: If file name is invalid or file is not found.
+    """
+    normalized_name = Path(file_name).name
+    if normalized_name != file_name:
+        raise HTTPException(status_code=400, detail="Invalid PDF file name.")
+
+    pdf_path = get_input_pdf_dir() / normalized_name
+    if not pdf_path.exists() or not pdf_path.is_file():
+        raise HTTPException(status_code=404, detail="PDF file not found.")
+
+    return FileResponse(path=pdf_path, media_type="application/pdf")
