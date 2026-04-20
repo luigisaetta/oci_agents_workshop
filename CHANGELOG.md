@@ -6,10 +6,15 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 
 ## [2026-04-20]
 
+### Added
+- Added `quickstart/responses01.py`, a minimal streaming Responses API example with CLI input and fixed model override to `openai.gpt-oss-120B` using the existing OCI OpenAI-compatible client.
+- Added unit tests in `tests/test_responses01.py` for runtime config validation, streaming event handling, and CLI flow.
+
 ### Changed
 - Added PDF filename logging at document-loading startup in both `simple_rag_agent/pdf_loader.py` and `custom_rag_agent/pdf_loader.py`.
 - Simplified embedding-stage logging by removing per-batch filename logs while keeping progress bar behavior unchanged.
 - Updated PDF loader tests in `tests/test_pdf_loader.py` and `tests/test_custom_pdf_loader.py` to reflect the simplified logging behavior.
+- Updated `quickstart/README.md` with `responses01.py` usage and required environment variables.
 
 ## [2026-04-19]
 
