@@ -375,11 +375,6 @@ export default function HomePage() {
                 </span>
               ) : null}
             </div>
-            {searchQuery ? (
-              <p className="search-query-box">
-                <strong>Search Query:</strong> {searchQuery}
-              </p>
-            ) : null}
             <div className="answer-box">
               {answer ? (
                 <div className="markdown-output">
