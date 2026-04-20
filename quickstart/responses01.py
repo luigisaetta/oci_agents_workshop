@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-21
+Date last modified: 2026-04-20
 License: MIT
 Description: Minimal streaming Responses API example using OCI OpenAI-compatible client.
 """
@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from common.oci_openai_clients import build_oci_openai_client
 from common.utils import collect_oci_runtime_config, print_oci_runtime_config
 
-DEFAULT_MODEL_ID = "openai.gpt-oss-120B"
+DEFAULT_MODEL_ID = "openai.gpt-5.2"
 DEFAULT_TEMPERATURE = 0.0
 DEFAULT_MAX_OUTPUT_TOKENS = 4096
 
@@ -140,6 +140,7 @@ def main() -> None:
         client=client,
         prompt=args.request,
         compartment_id=runtime_config["OCI_COMPARTMENT_ID"],
+        model_id=DEFAULT_MODEL_ID,
     )
     collect_streamed_output(stream)
     print()
