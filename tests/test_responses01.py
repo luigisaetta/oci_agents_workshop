@@ -48,7 +48,7 @@ def test_collect_responses_runtime_config_requires_openai_vars(monkeypatch) -> N
 
 
 def test_stream_response_text_streams_deltas_with_model_override() -> None:
-    """It should use stream=True and default to configured model id."""
+    """It should use stream=True and pass through provided model id."""
     events = [
         SimpleNamespace(type="response.output_text.delta", delta="Hello "),
         SimpleNamespace(type="response.output_text.delta", delta="world"),
@@ -61,11 +61,12 @@ def test_stream_response_text_streams_deltas_with_model_override() -> None:
             client=client,
             prompt="Say hello",
             compartment_id="ocid1.compartment.oc1..example",
+            model_id="openai.gpt-oss-120B",
         )
     )
 
     assert "".join(chunks) == "Hello world"
-    assert client.responses.last_kwargs["model"] == "openai.gpt-5.2"
+    assert client.responses.last_kwargs["model"] == "openai.gpt-oss-120B"
     assert client.responses.last_kwargs["extra_headers"] == {
         "opc-compartment-id": "ocid1.compartment.oc1..example"
     }
@@ -99,6 +100,7 @@ def test_main_reads_prompt_from_cli_and_prints_stream(monkeypatch, capsys) -> No
             "OCI_OPENAI_BASE_URL": "https://example.test/v1",
             "OCI_OPENAI_PROJECT_ID": "proj_123",
             "OCI_COMPARTMENT_ID": "ocid1.compartment.oc1..example",
+            "OCI_MODEL_ID": "openai.gpt-oss-120B",
         },
     )
     monkeypatch.setattr(responses01, "print_oci_runtime_config", lambda _cfg: None)
@@ -125,5 +127,6 @@ def test_main_reads_prompt_from_cli_and_prints_stream(monkeypatch, capsys) -> No
     printed = capsys.readouterr().out
     assert "Streaming Response" in printed
     assert (
-        "openai.gpt-5.2|ocid1.compartment.oc1..example|Echo: prompt from cli" in printed
+        "openai.gpt-oss-120B|ocid1.compartment.oc1..example|Echo: prompt from cli"
+        in printed
     )

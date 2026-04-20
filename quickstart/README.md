@@ -9,7 +9,7 @@ understand the workshop building blocks.
 - `quickstart/agent01.py`: simple 3-step LangGraph agent that returns JSON output.
 - `quickstart/embedding01.py`: embedding generation example with compact vector summary.
 - `quickstart/vector_store_search01.py`: semantic vector store search using OpenAI SDK, with output compatible with `custom_rag_agent` retrieved docs metadata.
-- `quickstart/responses01.py`: minimal streaming Responses API call using OCI OpenAI-compatible client with fixed model `openai.gpt-5.2`.
+- `quickstart/responses01.py`: minimal streaming Responses API call using OCI OpenAI-compatible client and `OCI_MODEL_ID` from environment.
 
 ## Run From Project Root
 
@@ -41,3 +41,4 @@ For `vector_store_search01.py`, set these env vars in `.env`:
 For `responses01.py`, set these env vars in `.env`:
 - `OCI_OPENAI_BASE_URL`
 - `OCI_OPENAI_PROJECT_ID`
+- `OCI_MODEL_ID`

@@ -17,7 +17,6 @@ from dotenv import load_dotenv
 from common.oci_openai_clients import build_oci_openai_client
 from common.utils import collect_oci_runtime_config, print_oci_runtime_config
 
-DEFAULT_MODEL_ID = "openai.gpt-5.2"
 DEFAULT_TEMPERATURE = 0.0
 DEFAULT_MAX_OUTPUT_TOKENS = 4096
 
@@ -51,7 +50,7 @@ def stream_response_text(
     client: Any,
     prompt: str,
     compartment_id: str,
-    model_id: str = DEFAULT_MODEL_ID,
+    model_id: str,
 ) -> Iterator[str]:
     """Yield streamed text chunks from a Responses API call.
 
@@ -126,7 +125,7 @@ def main() -> None:
 
     runtime_config = collect_responses_runtime_config()
     print_oci_runtime_config(runtime_config)
-    print(f"  MODEL_ID={DEFAULT_MODEL_ID}")
+    print(f"  MODEL_ID={runtime_config['OCI_MODEL_ID']}")
     print("---")
     print("-------- Streaming Response --------")
 
@@ -140,7 +139,7 @@ def main() -> None:
         client=client,
         prompt=args.request,
         compartment_id=runtime_config["OCI_COMPARTMENT_ID"],
-        model_id=DEFAULT_MODEL_ID,
+        model_id=runtime_config["OCI_MODEL_ID"],
     )
     collect_streamed_output(stream)
     print()
