@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -33,6 +33,7 @@ type StepState = {
   label: string;
   status: StepStatus;
   info: string;
+  durationMs: number | null;
 };
 
 const FALLBACK_STREAM_URL = "http://127.0.0.1:8000/invoke/stream";
@@ -42,19 +43,22 @@ const INITIAL_STEPS: StepState[] = [
     name: "query_rewriter",
     label: "Query Rewriter",
     status: "pending",
-    info: "Waiting"
+    info: "Waiting",
+    durationMs: null
   },
   {
     name: "semantic_searcher",
     label: "Semantic Searcher",
     status: "pending",
-    info: "Waiting"
+    info: "Waiting",
+    durationMs: null
   },
   {
     name: "answer_generator",
     label: "Answer Generator",
     status: "pending",
-    info: "Waiting"
+    info: "Waiting",
+    durationMs: null
   }
 ];
 
@@ -73,6 +77,16 @@ function parseSseDataLine(line: string): StreamEvent | null {
   } catch {
     return null;
   }
+}
+
+function formatDuration(durationMs: number | null): string {
+  if (durationMs === null) {
+    return "n/a";
+  }
+  if (durationMs < 1000) {
+    return `${durationMs} ms`;
+  }
+  return `${(durationMs / 1000).toFixed(2)} s`;
 }
 
 function buildPdfOpenUrl(
@@ -122,15 +136,28 @@ export default function HomePage() {
   const [answer, setAnswer] = useState("");
   const [docs, setDocs] = useState<RetrievedDoc[]>([]);
   const [steps, setSteps] = useState<StepState[]>(INITIAL_STEPS);
+  const [totalDurationMs, setTotalDurationMs] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const stepStartMsRef = useRef<Record<StepName, number | undefined>>({
+    query_rewriter: undefined,
+    semantic_searcher: undefined,
+    answer_generator: undefined
+  });
+  const requestStartMsRef = useRef<number | null>(null);
 
   function resetRuntimePanels() {
     setAnswer("");
     setDocs([]);
     setSteps(INITIAL_STEPS);
+    setTotalDurationMs(null);
     setSearchQuery("");
+    stepStartMsRef.current = {
+      query_rewriter: undefined,
+      semantic_searcher: undefined,
+      answer_generator: undefined
+    };
   }
 
   function clearChatOutput() {
@@ -139,7 +166,12 @@ export default function HomePage() {
     setDocs([]);
   }
 
-  function updateStep(stepName: StepName, status: StepStatus, info: string) {
+  function updateStep(
+    stepName: StepName,
+    status: StepStatus,
+    info: string,
+    durationMs: number | null = null
+  ) {
     setSteps((previous) =>
       previous.map((step) => {
         if (step.name !== stepName) {
@@ -148,7 +180,8 @@ export default function HomePage() {
         return {
           ...step,
           status,
-          info
+          info,
+          durationMs
         };
       })
     );
@@ -162,6 +195,7 @@ export default function HomePage() {
     const trimmedQuestion = question.trim();
     const parsedTopK = Number.parseInt(topK, 10);
     const historySnapshot = [...history];
+    requestStartMsRef.current = Date.now();
     resetRuntimePanels();
 
     try {
@@ -212,6 +246,7 @@ export default function HomePage() {
           }
 
           if (payload.event === "step_started" && payload.step) {
+            stepStartMsRef.current[payload.step] = Date.now();
             updateStep(payload.step, "running", payload.message || "Running");
             continue;
           }
@@ -226,7 +261,9 @@ export default function HomePage() {
               const count = payload.retrieved_docs?.length || 0;
               info = `Retrieved ${count} documents`;
             }
-            updateStep(payload.step, "completed", info);
+            const startedAt = stepStartMsRef.current[payload.step];
+            const durationMs = startedAt ? Date.now() - startedAt : null;
+            updateStep(payload.step, "completed", info, durationMs);
             continue;
           }
 
@@ -248,6 +285,9 @@ export default function HomePage() {
             const completedOutput = payload.output || finalOutput;
             setAnswer(completedOutput);
             setDocs(payload.retrieved_docs || []);
+            if (requestStartMsRef.current) {
+              setTotalDurationMs(Date.now() - requestStartMsRef.current);
+            }
             setHistory([
               ...historySnapshot,
               { role: "user", content: trimmedQuestion },
@@ -321,6 +361,9 @@ export default function HomePage() {
           </div>
 
           <h2>Execution Progress</h2>
+          <p className="history-indicator">
+            Total time: {formatDuration(totalDurationMs)}
+          </p>
           <ul className="step-list">
             {steps.map((step) => (
               <li key={step.name}>
@@ -328,6 +371,9 @@ export default function HomePage() {
                 <div>
                   <p className="step-label">{step.label}</p>
                   <p className="step-info">{step.info}</p>
+                  <p className="step-info">
+                    Time: {formatDuration(step.durationMs)}
+                  </p>
                 </div>
               </li>
             ))}
