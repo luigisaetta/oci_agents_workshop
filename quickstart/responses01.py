@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-04-20
+Date last modified: 2026-04-21
 License: MIT
 Description: Minimal streaming Responses API example using OCI OpenAI-compatible client.
 """
@@ -50,6 +50,7 @@ def stream_response_text(
     *,
     client: Any,
     prompt: str,
+    compartment_id: str,
     model_id: str = DEFAULT_MODEL_ID,
 ) -> Iterator[str]:
     """Yield streamed text chunks from a Responses API call.
@@ -57,6 +58,7 @@ def stream_response_text(
     Args:
         client: OpenAI-compatible client exposing ``responses.create``.
         prompt: Input text sent to the model.
+        compartment_id: OCI compartment OCID used in request header.
         model_id: Model id to use for the request.
 
     Yields:
@@ -74,6 +76,7 @@ def stream_response_text(
         input=prompt_text,
         temperature=DEFAULT_TEMPERATURE,
         max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+        extra_headers={"opc-compartment-id": compartment_id},
         stream=True,
     )
 
@@ -133,7 +136,11 @@ def main() -> None:
         auth_profile=runtime_config["OCI_AUTH_PROFILE"],
     )
 
-    stream = stream_response_text(client=client, prompt=args.request)
+    stream = stream_response_text(
+        client=client,
+        prompt=args.request,
+        compartment_id=runtime_config["OCI_COMPARTMENT_ID"],
+    )
     collect_streamed_output(stream)
     print()
 

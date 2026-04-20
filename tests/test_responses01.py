@@ -60,11 +60,15 @@ def test_stream_response_text_streams_deltas_with_model_override() -> None:
         responses01.stream_response_text(
             client=client,
             prompt="Say hello",
+            compartment_id="ocid1.compartment.oc1..example",
         )
     )
 
     assert "".join(chunks) == "Hello world"
     assert client.responses.last_kwargs["model"] == "openai.gpt-oss-120B"
+    assert client.responses.last_kwargs["extra_headers"] == {
+        "opc-compartment-id": "ocid1.compartment.oc1..example"
+    }
     assert client.responses.last_kwargs["stream"] is True
 
 
@@ -77,6 +81,7 @@ def test_stream_response_text_uses_done_when_no_delta() -> None:
         responses01.stream_response_text(
             client=client,
             prompt="Answer",
+            compartment_id="ocid1.compartment.oc1..example",
         )
     )
 
@@ -100,7 +105,7 @@ def test_main_reads_prompt_from_cli_and_prints_stream(monkeypatch, capsys) -> No
     monkeypatch.setattr(
         responses01,
         "stream_response_text",
-        lambda **kwargs: iter([f"Echo: {kwargs['prompt']}"]),
+        lambda **kwargs: iter([f"{kwargs['compartment_id']}|Echo: {kwargs['prompt']}"]),
     )
     monkeypatch.setattr(
         "sys.argv",
@@ -111,4 +116,4 @@ def test_main_reads_prompt_from_cli_and_prints_stream(monkeypatch, capsys) -> No
 
     printed = capsys.readouterr().out
     assert "Streaming Response" in printed
-    assert "Echo: prompt from cli" in printed
+    assert "ocid1.compartment.oc1..example|Echo: prompt from cli" in printed
