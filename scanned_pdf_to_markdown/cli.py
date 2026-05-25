@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Dict
 
 from dotenv import load_dotenv
 
@@ -90,6 +91,23 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def apply_model_override(
+    runtime_config: Dict[str, str], model_id: str
+) -> Dict[str, str]:
+    """Return runtime configuration with the effective model ID.
+
+    Args:
+        runtime_config: Runtime configuration loaded from environment variables.
+        model_id: Model ID selected by the CLI arguments.
+
+    Returns:
+        Runtime configuration copy with ``OCI_MODEL_ID`` set to the effective model.
+    """
+    effective_config = dict(runtime_config)
+    effective_config["OCI_MODEL_ID"] = model_id
+    return effective_config
+
+
 def main() -> None:
     """Run the scanned PDF to Markdown pipeline."""
     parser = build_parser()
@@ -97,11 +115,12 @@ def main() -> None:
 
     load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
     runtime_config = collect_oci_runtime_config()
-    print_oci_runtime_config(runtime_config)
+    effective_config = apply_model_override(runtime_config, args.model_id)
+    print_oci_runtime_config(effective_config)
 
     llm = build_vision_model(
-        runtime_config=runtime_config,
-        model_id=args.model_id,
+        runtime_config=effective_config,
+        model_id=effective_config["OCI_MODEL_ID"],
     )
     output_path = default_output_path(args.pdf_path, args.output)
     image_output_dir = default_image_output_dir(args.pdf_path, args.image_output_dir)

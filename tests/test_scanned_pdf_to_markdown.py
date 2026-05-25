@@ -12,6 +12,7 @@ import pytest
 from PIL import Image
 
 from scanned_pdf_to_markdown import (
+    cli,
     document_writer,
     pdf_images,
     pipeline,
@@ -111,6 +112,22 @@ def test_default_conversion_options_match_model_ready_image_defaults() -> None:
     assert options.image_format == "jpeg"
     assert options.max_side == 1600
     assert options.jpeg_quality == 85
+
+
+def test_apply_model_override_updates_printed_runtime_config() -> None:
+    """It should expose the CLI-selected model in the effective runtime config."""
+    runtime_config = {
+        "OCI_MODEL_ID": "openai.gpt-oss-120b",
+        "OCI_REGION": "us-chicago-1",
+    }
+
+    effective_config = cli.apply_model_override(
+        runtime_config,
+        "cohere.command-a-vision",
+    )
+
+    assert effective_config["OCI_MODEL_ID"] == "cohere.command-a-vision"
+    assert runtime_config["OCI_MODEL_ID"] == "openai.gpt-oss-120b"
 
 
 def test_validate_image_options_rejects_invalid_format() -> None:
