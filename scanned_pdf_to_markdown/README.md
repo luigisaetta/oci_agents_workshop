@@ -159,12 +159,10 @@ options = ConversionOptions(
 
 ## Prompt
 
-The default prompt asks the model to return only transcribed text, preserving
-visible reading order, line breaks, headings, lists, tables, units, symbols, and
-special characters. The rendered page image is re-encoded as an in-memory JPEG
-data URL before it is sent to the model, matching the reference multimodal
-extraction pipeline more closely. The prompt also asks the model to mark
-unreadable text as `[ILLEGIBLE]` instead of guessing.
+The default prompt is intentionally minimal: `Extract all the text in the image.`
+The rendered page image is re-encoded as an in-memory JPEG data URL before it is
+sent to the model, matching the reference multimodal extraction pipeline more
+closely.
 
 ## Notes
 

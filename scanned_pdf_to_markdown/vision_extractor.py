@@ -20,26 +20,7 @@ from common.utils import extract_text
 
 DEFAULT_MODEL_ID = "cohere.command-a-vision"
 
-DEFAULT_EXTRACTION_PROMPT = """You are performing OCR on a scanned document page.
-Return ONLY the transcribed text.
-
-Rules:
-- Do not return JSON.
-- Do not wrap the output in Markdown fences.
-- Do not add page numbers.
-- Do not summarize.
-- Do not translate.
-- Preserve reading order, paragraphs, line breaks, headings, lists, and numbering.
-- Keep units, symbols, mathematical signs, and special characters exactly as in the source.
-- Do not guess or invent missing characters.
-- If text or symbols are unreadable, write [ILLEGIBLE].
-
-Tables:
-- If you detect a table, output it as a GitHub-flavored Markdown table using pipes '|'.
-- Flatten multi-row or multi-level headers into a single explicit header row when possible.
-- Do not use spaces to align columns. Use only Markdown pipes.
-- Keep each data row on a single Markdown row.
-- If a cell is empty or the source shows '-', output '-'."""
+DEFAULT_EXTRACTION_PROMPT = "Extract all the text in the image."
 
 
 def image_file_to_data_url(image_path: Path, jpeg_quality: int = 85) -> str:
@@ -91,7 +72,6 @@ def build_vision_model(
         model_id=model_id,
         service_endpoint=runtime_config["OCI_SERVICE_ENDPOINT"],
         compartment_id=runtime_config["OCI_COMPARTMENT_ID"],
-        provider="cohere",
         auth_type=runtime_config["OCI_AUTH_TYPE"],
         auth_profile=runtime_config["OCI_AUTH_PROFILE"],
         model_kwargs={"temperature": temperature, "max_tokens": max_tokens},
