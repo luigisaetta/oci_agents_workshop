@@ -56,6 +56,72 @@ python -m scanned_pdf_to_markdown.cli \
   --output output/sample_scanned.md
 ```
 
+## Use From Python Code
+
+You can also import the backend pipeline from another Python module. This is the
+recommended approach when you want to integrate scanned PDF extraction into an
+API, a batch job, or a larger document-processing workflow.
+
+```python
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from common.utils import collect_oci_runtime_config
+from scanned_pdf_to_markdown.pipeline import (
+    ConversionOptions,
+    convert_scanned_pdf_to_markdown,
+)
+from scanned_pdf_to_markdown.vision_extractor import build_vision_model
+
+
+def convert_document(pdf_path: Path) -> Path:
+    """Convert one scanned PDF into Markdown.
+
+    Args:
+        pdf_path: Path to the scanned PDF file.
+
+    Returns:
+        Path to the generated Markdown file.
+    """
+    load_dotenv(".env")
+
+    runtime_config = collect_oci_runtime_config()
+    llm = build_vision_model(runtime_config)
+
+    output_path = Path("output") / f"{pdf_path.stem}.md"
+    image_output_dir = Path("output") / f"{pdf_path.stem}_pages"
+
+    return convert_scanned_pdf_to_markdown(
+        pdf_path=pdf_path,
+        output_path=output_path,
+        image_output_dir=image_output_dir,
+        llm=llm,
+        options=ConversionOptions(
+            dpi=200,
+            include_page_markers=True,
+        ),
+    )
+
+
+if __name__ == "__main__":
+    generated_file = convert_document(Path("input_pdf/sample_scanned.pdf"))
+    print(f"Generated Markdown file: {generated_file}")
+```
+
+For custom extraction behavior, pass your own prompt through `ConversionOptions`:
+
+```python
+options = ConversionOptions(
+    dpi=250,
+    prompt=(
+        "Extract all visible text from this scanned page as Markdown. "
+        "Preserve tables and list numbering. Return only Markdown."
+    ),
+    include_page_markers=False,
+)
+```
+
 ## Prompt
 
 The default prompt asks the model to return only Markdown, preserving visible
@@ -68,4 +134,3 @@ the model to mark unreadable words as `[unreadable]` instead of guessing.
 - The Markdown extraction is performed one page at a time.
 - Page markers are added as HTML comments, for example `<!-- Page 1 -->`.
 - Use `--no-page-markers` if you want the final Markdown without page markers.
-
