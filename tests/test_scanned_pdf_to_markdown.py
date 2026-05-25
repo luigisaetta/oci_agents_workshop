@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from PIL import Image
 
 from scanned_pdf_to_markdown import (
     document_writer,
@@ -31,6 +32,7 @@ def _fake_invoke(messages):
     content = messages[0].content
     assert content[0]["type"] == "text"
     assert content[1]["type"] == "image_url"
+    assert content[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
     return SimpleNamespace(content="```markdown\n# Extracted\n\nText\n```")
 
 
@@ -62,8 +64,8 @@ def test_write_markdown_document_creates_parent_directory(tmp_path: Path) -> Non
 
 def test_extract_markdown_from_image_uses_multimodal_message(tmp_path: Path) -> None:
     """It should send text and image content to the model."""
-    image_path = tmp_path / "page.png"
-    image_path.write_bytes(b"fake image")
+    image_path = tmp_path / "page.jpg"
+    Image.new("RGB", (8, 8), color="white").save(image_path)
 
     markdown = vision_extractor.extract_markdown_from_image(
         image_path=image_path,
@@ -72,6 +74,16 @@ def test_extract_markdown_from_image_uses_multimodal_message(tmp_path: Path) -> 
     )
 
     assert markdown == "# Extracted\n\nText"
+
+
+def test_image_file_to_data_url_encodes_jpeg_payload(tmp_path: Path) -> None:
+    """It should encode rendered images as JPEG data URLs."""
+    image_path = tmp_path / "page.png"
+    Image.new("RGB", (8, 8), color="white").save(image_path)
+
+    data_url = vision_extractor.image_file_to_data_url(image_path)
+
+    assert data_url.startswith("data:image/jpeg;base64,")
 
 
 def test_extract_markdown_from_image_requires_existing_image(tmp_path: Path) -> None:
@@ -134,9 +146,10 @@ def test_convert_scanned_pdf_to_markdown_orchestrates_steps(
         assert options.jpeg_quality == 85
         return image_paths
 
-    def _fake_extract_markdown_from_image(image_path, llm, prompt):
+    def _fake_extract_markdown_from_image(image_path, llm, prompt, jpeg_quality):
         assert llm == "fake-llm"
         assert prompt == "Extract."
+        assert jpeg_quality == 85
         return f"# {image_path.stem}"
 
     monkeypatch.setattr(

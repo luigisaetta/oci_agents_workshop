@@ -12,6 +12,8 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 
 ### Changed
 - Updated `scanned_pdf_to_markdown/` rendering defaults to use 200 DPI, JPEG output, max-side resizing, and a stricter OCR prompt for more stable multimodal extraction.
+- Switched `scanned_pdf_to_markdown/` PDF page rendering from PyMuPDF to pypdfium2 to match the reference multimodal extraction pipeline more closely.
+- Updated `scanned_pdf_to_markdown/` model calls to encode rendered images as in-memory JPEG data URLs and use a text-first OCR prompt.
 
 ## [2026-04-20]
 

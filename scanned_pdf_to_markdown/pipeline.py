@@ -84,6 +84,7 @@ def convert_scanned_pdf_to_markdown(
             image_path=image_path,
             llm=llm,
             prompt=options.prompt,
+            jpeg_quality=options.jpeg_quality,
         )
         for image_path in image_paths
     ]

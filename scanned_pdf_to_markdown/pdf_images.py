@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
-import fitz
 from PIL import Image
+import pypdfium2 as pdfium
 
 DEFAULT_DPI = 200
 DEFAULT_IMAGE_FORMAT = "jpeg"
@@ -62,18 +62,6 @@ def validate_image_options(options: ImageRenderOptions) -> str:
     return normalized_format
 
 
-def _pixmap_to_image(pixmap: fitz.Pixmap) -> Image.Image:
-    """Convert a PyMuPDF pixmap to a PIL image.
-
-    Args:
-        pixmap: Rendered PyMuPDF pixmap.
-
-    Returns:
-        RGB PIL image.
-    """
-    return Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
-
-
 def _resize_image(image: Image.Image, max_side: int) -> Image.Image:
     """Resize an image when its largest side exceeds ``max_side``.
 
@@ -118,22 +106,26 @@ def _save_image(
 
 
 def _render_page_to_image(
-    page: fitz.Page,
-    matrix: fitz.Matrix,
+    document: pdfium.PdfDocument,
+    page_index: int,
+    scale: float,
     max_side: int,
 ) -> Image.Image:
-    """Render one PDF page and resize it for model input.
+    """Render one PDF page with pypdfium2 and resize it for model input.
 
     Args:
-        page: PyMuPDF page object.
-        matrix: Rendering scale matrix.
+        document: Open pypdfium2 document.
+        page_index: Zero-based page index.
+        scale: Rendering scale derived from DPI.
         max_side: Maximum output width or height.
 
     Returns:
         Rendered and resized PIL image.
     """
-    pixmap = page.get_pixmap(matrix=matrix, alpha=False)
-    return _resize_image(_pixmap_to_image(pixmap), max_side=max_side)
+    page = document[page_index]
+    bitmap = page.render(scale=scale)
+    image = bitmap.to_pil().convert("RGB")
+    return _resize_image(image, max_side=max_side)
 
 
 def render_pdf_to_images(
@@ -162,18 +154,17 @@ def render_pdf_to_images(
 
     normalized_format = validate_image_options(options)
     output_dir.mkdir(parents=True, exist_ok=True)
-    zoom = options.dpi / 72
-    matrix = fitz.Matrix(zoom, zoom)
     rendered_paths: List[Path] = []
     extension = "jpg" if normalized_format == "jpeg" else "png"
+    scale = options.dpi / 72.0
 
-    document = fitz.open(pdf_path)
+    document = pdfium.PdfDocument(str(pdf_path))
     try:
-        for page_index in range(document.page_count):
-            page = document.load_page(page_index)
+        for page_index in range(len(document)):
             image = _render_page_to_image(
-                page=page,
-                matrix=matrix,
+                document=document,
+                page_index=page_index,
+                scale=scale,
                 max_side=options.max_side,
             )
             image_path = (

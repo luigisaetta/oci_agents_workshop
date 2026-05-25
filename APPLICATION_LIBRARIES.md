@@ -31,7 +31,7 @@ Scope:
 
 - `pypdf`
   - Used in: `simple_rag_agent/pdf_loader.py`, `custom_rag_agent/pdf_loader.py`
-- `pymupdf` (`fitz`)
+- `pypdfium2`
   - Used in: `scanned_pdf_to_markdown/pdf_images.py`
 - `pillow` (`PIL`)
   - Used in: `scanned_pdf_to_markdown/pdf_images.py`

@@ -159,14 +159,16 @@ options = ConversionOptions(
 
 ## Prompt
 
-The default prompt asks the model to return only Markdown, preserving visible
-reading order, line breaks, headings, lists, tables, units, symbols, and special
-characters. It also asks the model to mark unreadable text as `[ILLEGIBLE]`
-instead of guessing.
+The default prompt asks the model to return only transcribed text, preserving
+visible reading order, line breaks, headings, lists, tables, units, symbols, and
+special characters. The rendered page image is re-encoded as an in-memory JPEG
+data URL before it is sent to the model, matching the reference multimodal
+extraction pipeline more closely. The prompt also asks the model to mark
+unreadable text as `[ILLEGIBLE]` instead of guessing.
 
 ## Notes
 
-- The PDF is rendered with PyMuPDF and saved as JPEG by default.
+- The PDF is rendered with pypdfium2 and saved as JPEG by default.
 - Use `--image-format png` if you need PNG output for debugging or comparison.
 - The Markdown extraction is performed one page at a time.
 - Page markers are added as HTML comments, for example `<!-- Page 1 -->`.

@@ -22,7 +22,7 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "pypdf",
-    "pymupdf",
+    "pypdfium2",
     "pillow",
     "tqdm",
     "numpy",
