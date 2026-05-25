@@ -1,0 +1,99 @@
+"""
+Author: L. Saetta
+Date last modified: 2026-05-25
+License: MIT
+Description: Command line entry point for scanned PDF Markdown extraction.
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from common.utils import collect_oci_runtime_config, print_oci_runtime_config
+from scanned_pdf_to_markdown.pipeline import (
+    ConversionOptions,
+    convert_scanned_pdf_to_markdown,
+    default_image_output_dir,
+    default_output_path,
+)
+from scanned_pdf_to_markdown.vision_extractor import (
+    DEFAULT_MODEL_ID,
+    build_vision_model,
+)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Build the command line parser.
+
+    Returns:
+        Configured argument parser.
+    """
+    parser = argparse.ArgumentParser(
+        description="Convert a scanned PDF into Markdown using OCI vision models."
+    )
+    parser.add_argument("pdf_path", type=Path, help="Path to the scanned PDF file.")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Destination Markdown file. Defaults to output/<pdf-name>.md.",
+    )
+    parser.add_argument(
+        "--image-output-dir",
+        type=Path,
+        default=None,
+        help="Directory for generated page PNG files.",
+    )
+    parser.add_argument(
+        "--dpi",
+        type=int,
+        default=200,
+        help="PDF rendering resolution. Default: 200.",
+    )
+    parser.add_argument(
+        "--model-id",
+        default=DEFAULT_MODEL_ID,
+        help=f"OCI vision model ID. Default: {DEFAULT_MODEL_ID}.",
+    )
+    parser.add_argument(
+        "--no-page-markers",
+        action="store_true",
+        help="Do not add page markers to the final Markdown document.",
+    )
+    return parser
+
+
+def main() -> None:
+    """Run the scanned PDF to Markdown pipeline."""
+    parser = build_parser()
+    args = parser.parse_args()
+
+    load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
+    runtime_config = collect_oci_runtime_config()
+    print_oci_runtime_config(runtime_config)
+
+    llm = build_vision_model(
+        runtime_config=runtime_config,
+        model_id=args.model_id,
+    )
+    output_path = default_output_path(args.pdf_path, args.output)
+    image_output_dir = default_image_output_dir(args.pdf_path, args.image_output_dir)
+
+    result_path = convert_scanned_pdf_to_markdown(
+        pdf_path=args.pdf_path,
+        output_path=output_path,
+        image_output_dir=image_output_dir,
+        llm=llm,
+        options=ConversionOptions(
+            dpi=args.dpi,
+            include_page_markers=not args.no_page_markers,
+        ),
+    )
+    print(f"Markdown file written to: {result_path}")
+
+
+if __name__ == "__main__":
+    main()

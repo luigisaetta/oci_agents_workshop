@@ -22,6 +22,7 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "pypdf",
+    "pymupdf",
     "tqdm",
     "numpy",
 ]
@@ -34,4 +35,10 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["common", "quickstart", "simple_rag_agent", "custom_rag_agent"]
+packages = [
+    "common",
+    "quickstart",
+    "scanned_pdf_to_markdown",
+    "simple_rag_agent",
+    "custom_rag_agent",
+]
