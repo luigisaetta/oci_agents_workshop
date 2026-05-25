@@ -13,6 +13,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from common.utils import collect_oci_runtime_config, print_oci_runtime_config
+from scanned_pdf_to_markdown.pdf_images import (
+    DEFAULT_DPI,
+    DEFAULT_IMAGE_FORMAT,
+    DEFAULT_JPEG_QUALITY,
+    DEFAULT_MAX_SIDE,
+)
 from scanned_pdf_to_markdown.pipeline import (
     ConversionOptions,
     convert_scanned_pdf_to_markdown,
@@ -45,13 +51,31 @@ def build_parser() -> argparse.ArgumentParser:
         "--image-output-dir",
         type=Path,
         default=None,
-        help="Directory for generated page PNG files.",
+        help="Directory for generated page image files.",
     )
     parser.add_argument(
         "--dpi",
         type=int,
-        default=200,
-        help="PDF rendering resolution. Default: 200.",
+        default=DEFAULT_DPI,
+        help=f"PDF rendering resolution. Default: {DEFAULT_DPI}.",
+    )
+    parser.add_argument(
+        "--image-format",
+        choices=("jpeg", "png"),
+        default=DEFAULT_IMAGE_FORMAT,
+        help=f"Rendered page image format. Default: {DEFAULT_IMAGE_FORMAT}.",
+    )
+    parser.add_argument(
+        "--max-side",
+        type=int,
+        default=DEFAULT_MAX_SIDE,
+        help=f"Maximum rendered image width or height. Default: {DEFAULT_MAX_SIDE}.",
+    )
+    parser.add_argument(
+        "--jpeg-quality",
+        type=int,
+        default=DEFAULT_JPEG_QUALITY,
+        help=f"JPEG quality when --image-format=jpeg. Default: {DEFAULT_JPEG_QUALITY}.",
     )
     parser.add_argument(
         "--model-id",
@@ -89,6 +113,9 @@ def main() -> None:
         llm=llm,
         options=ConversionOptions(
             dpi=args.dpi,
+            image_format=args.image_format,
+            max_side=args.max_side,
+            jpeg_quality=args.jpeg_quality,
             include_page_markers=not args.no_page_markers,
         ),
     )

@@ -15,7 +15,14 @@ from scanned_pdf_to_markdown.document_writer import (
     assemble_markdown_document,
     write_markdown_document,
 )
-from scanned_pdf_to_markdown.pdf_images import render_pdf_to_png
+from scanned_pdf_to_markdown.pdf_images import (
+    DEFAULT_DPI,
+    DEFAULT_IMAGE_FORMAT,
+    DEFAULT_JPEG_QUALITY,
+    DEFAULT_MAX_SIDE,
+    ImageRenderOptions,
+    render_pdf_to_images,
+)
 from scanned_pdf_to_markdown.vision_extractor import (
     DEFAULT_EXTRACTION_PROMPT,
     extract_markdown_from_image,
@@ -28,11 +35,17 @@ class ConversionOptions:
 
     Attributes:
         dpi: PDF rendering resolution.
+        image_format: Output image format for rendered pages.
+        max_side: Maximum width or height after resizing.
+        jpeg_quality: JPEG quality used when ``image_format`` is ``jpeg``.
         prompt: Prompt used for each page image.
         include_page_markers: Whether to add page markers in the final document.
     """
 
-    dpi: int = 200
+    dpi: int = DEFAULT_DPI
+    image_format: str = DEFAULT_IMAGE_FORMAT
+    max_side: int = DEFAULT_MAX_SIDE
+    jpeg_quality: int = DEFAULT_JPEG_QUALITY
     prompt: str = DEFAULT_EXTRACTION_PROMPT
     include_page_markers: bool = True
 
@@ -49,17 +62,22 @@ def convert_scanned_pdf_to_markdown(
     Args:
         pdf_path: Source scanned PDF path.
         output_path: Destination Markdown file path.
-        image_output_dir: Directory where page PNG files are generated.
+        image_output_dir: Directory where page image files are generated.
         llm: LangChain multimodal model used for image extraction.
         options: Conversion options.
 
     Returns:
         Path to the generated Markdown file.
     """
-    image_paths = render_pdf_to_png(
+    image_paths = render_pdf_to_images(
         pdf_path=pdf_path,
         output_dir=image_output_dir,
-        dpi=options.dpi,
+        options=ImageRenderOptions(
+            dpi=options.dpi,
+            image_format=options.image_format,
+            max_side=options.max_side,
+            jpeg_quality=options.jpeg_quality,
+        ),
     )
     page_markdown = [
         extract_markdown_from_image(

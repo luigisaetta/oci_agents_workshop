@@ -6,7 +6,8 @@ multimodal model through `langchain-oci`.
 
 The pipeline does four things:
 
-- renders each PDF page as a PNG image;
+- renders each PDF page as an image;
+- resizes each page image to a model-friendly maximum side length;
 - sends each image to `cohere.command-a-vision`;
 - asks the model to extract all visible text as Markdown;
 - assembles all page outputs into one Markdown file.
@@ -71,6 +72,11 @@ output/sample_scanned_pages/
 output/sample_scanned.md
 ```
 
+By default, pages are rendered at 200 DPI, resized to a maximum side of 1600
+pixels, and saved as JPEG with quality 85. These defaults keep the image payload
+stable and close to the settings used by the reference multimodal extraction
+pipeline.
+
 You can choose explicit paths:
 
 ```bash
@@ -123,6 +129,9 @@ def convert_document(pdf_path: Path) -> Path:
         llm=llm,
         options=ConversionOptions(
             dpi=200,
+            image_format="jpeg",
+            max_side=1600,
+            jpeg_quality=85,
             include_page_markers=True,
         ),
     )
@@ -138,6 +147,8 @@ For custom extraction behavior, pass your own prompt through `ConversionOptions`
 ```python
 options = ConversionOptions(
     dpi=250,
+    image_format="png",
+    max_side=2000,
     prompt=(
         "Extract all visible text from this scanned page as Markdown. "
         "Preserve tables and list numbering. Return only Markdown."
@@ -149,12 +160,14 @@ options = ConversionOptions(
 ## Prompt
 
 The default prompt asks the model to return only Markdown, preserving visible
-reading order, headings, paragraphs, lists, tables, and footnotes. It also asks
-the model to mark unreadable words as `[unreadable]` instead of guessing.
+reading order, line breaks, headings, lists, tables, units, symbols, and special
+characters. It also asks the model to mark unreadable text as `[ILLEGIBLE]`
+instead of guessing.
 
 ## Notes
 
-- The PDF is rendered with PyMuPDF and produces PNG files.
+- The PDF is rendered with PyMuPDF and saved as JPEG by default.
+- Use `--image-format png` if you need PNG output for debugging or comparison.
 - The Markdown extraction is performed one page at a time.
 - Page markers are added as HTML comments, for example `<!-- Page 1 -->`.
 - Use `--no-page-markers` if you want the final Markdown without page markers.

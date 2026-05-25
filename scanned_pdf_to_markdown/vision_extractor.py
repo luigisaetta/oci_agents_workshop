@@ -17,13 +17,26 @@ from common.utils import extract_text
 
 DEFAULT_MODEL_ID = "cohere.command-a-vision"
 
-DEFAULT_EXTRACTION_PROMPT = """You are extracting text from a scanned document page.
+DEFAULT_EXTRACTION_PROMPT = """You are performing OCR on a scanned document page.
+Return ONLY the transcribed content as clean Markdown.
 
-Return all visible text from the image as clean Markdown.
-Preserve reading order, headings, paragraphs, lists, tables, and footnotes when visible.
-Do not summarize, translate, add explanations, or invent missing text.
-If a word is unreadable, write [unreadable].
-Return only Markdown content."""
+Rules:
+- Do not return JSON.
+- Do not wrap the output in Markdown fences.
+- Do not add page numbers.
+- Do not summarize.
+- Do not translate.
+- Preserve reading order, paragraphs, line breaks, headings, lists, and numbering.
+- Keep units, symbols, mathematical signs, and special characters exactly as in the source.
+- Do not guess or invent missing characters.
+- If text or symbols are unreadable, write [ILLEGIBLE].
+
+Tables:
+- If you detect a table, output it as a GitHub-flavored Markdown table using pipes '|'.
+- Flatten multi-row or multi-level headers into a single explicit header row when possible.
+- Do not use spaces to align columns. Use only Markdown pipes.
+- Keep each data row on a single Markdown row.
+- If a cell is empty or the source shows '-', output '-'."""
 
 
 def build_vision_model(
@@ -79,7 +92,7 @@ def extract_markdown_from_image(
     """Extract Markdown text from one page image.
 
     Args:
-        image_path: PNG image path for one rendered PDF page.
+        image_path: Image path for one rendered PDF page.
         llm: LangChain chat model with vision support.
         prompt: Extraction prompt sent with the image.
 

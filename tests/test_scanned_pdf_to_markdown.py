@@ -10,7 +10,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from scanned_pdf_to_markdown import document_writer, pipeline, vision_extractor
+from scanned_pdf_to_markdown import (
+    document_writer,
+    pdf_images,
+    pipeline,
+    vision_extractor,
+)
 
 
 def _fake_invoke(messages):
@@ -86,6 +91,29 @@ def test_default_paths_are_based_on_pdf_name() -> None:
     assert pipeline.default_image_output_dir(pdf_path) == Path("output/sample_pages")
 
 
+def test_default_conversion_options_match_model_ready_image_defaults() -> None:
+    """It should use the model-ready JPEG defaults for page rendering."""
+    options = pipeline.ConversionOptions()
+
+    assert options.dpi == 200
+    assert options.image_format == "jpeg"
+    assert options.max_side == 1600
+    assert options.jpeg_quality == 85
+
+
+def test_validate_image_options_rejects_invalid_format() -> None:
+    """It should reject unsupported rendered image formats."""
+    with pytest.raises(ValueError):
+        pdf_images.validate_image_options(
+            pdf_images.ImageRenderOptions(
+                dpi=200,
+                image_format="gif",
+                jpeg_quality=85,
+                max_side=1600,
+            )
+        )
+
+
 def test_convert_scanned_pdf_to_markdown_orchestrates_steps(
     monkeypatch,
     tmp_path: Path,
@@ -95,12 +123,15 @@ def test_convert_scanned_pdf_to_markdown_orchestrates_steps(
     pdf_path.write_bytes(b"%PDF-1.4\n")
     image_dir = tmp_path / "pages"
     output_path = tmp_path / "output.md"
-    image_paths = [image_dir / "page_001.png", image_dir / "page_002.png"]
+    image_paths = [image_dir / "page_001.jpg", image_dir / "page_002.jpg"]
 
-    def _fake_render_pdf_to_png(pdf_path, output_dir, dpi):
+    def _fake_render_pdf_to_images(pdf_path, output_dir, options):
         assert pdf_path.name == "sample.pdf"
         assert output_dir == image_dir
-        assert dpi == 300
+        assert options.dpi == 200
+        assert options.image_format == "jpeg"
+        assert options.max_side == 1600
+        assert options.jpeg_quality == 85
         return image_paths
 
     def _fake_extract_markdown_from_image(image_path, llm, prompt):
@@ -110,8 +141,8 @@ def test_convert_scanned_pdf_to_markdown_orchestrates_steps(
 
     monkeypatch.setattr(
         pipeline,
-        "render_pdf_to_png",
-        _fake_render_pdf_to_png,
+        "render_pdf_to_images",
+        _fake_render_pdf_to_images,
     )
     monkeypatch.setattr(
         pipeline,
@@ -124,7 +155,7 @@ def test_convert_scanned_pdf_to_markdown_orchestrates_steps(
         output_path=output_path,
         image_output_dir=image_dir,
         llm="fake-llm",
-        options=pipeline.ConversionOptions(dpi=300, prompt="Extract."),
+        options=pipeline.ConversionOptions(prompt="Extract."),
     )
 
     assert result == output_path

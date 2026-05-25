@@ -23,6 +23,7 @@ dependencies = [
     "uvicorn",
     "pypdf",
     "pymupdf",
+    "pillow",
     "tqdm",
     "numpy",
 ]
