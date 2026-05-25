@@ -73,9 +73,10 @@ output/sample_scanned.md
 ```
 
 By default, pages are rendered at 200 DPI, resized to a maximum side of 1600
-pixels, and saved as JPEG with quality 85. These defaults keep the image payload
-stable and close to the settings used by the reference multimodal extraction
-pipeline.
+pixels, and saved as JPEG with quality 85. The same image format is used for the
+payload sent to the model. JPEG is the recommended default because it keeps the
+image payload stable and close to the settings used by the reference multimodal
+extraction pipeline.
 
 You can choose explicit paths:
 
@@ -160,14 +161,16 @@ options = ConversionOptions(
 ## Prompt
 
 The default prompt is intentionally minimal: `Extract all the text in the image.`
-The rendered page image is re-encoded as an in-memory JPEG data URL before it is
-sent to the model, matching the reference multimodal extraction pipeline more
-closely.
+The rendered page image is re-encoded as an in-memory data URL before it is sent
+to the model. JPEG is the default, but PNG is also supported with
+`--image-format png` or `ConversionOptions(image_format="png")`.
 
 ## Notes
 
 - The PDF is rendered with pypdfium2 and saved as JPEG by default.
-- Use `--image-format png` if you need PNG output for debugging or comparison.
+- Use `--image-format png` if you want PNG page images and PNG model payloads.
+- If you change the default rendering options, test the output carefully with
+  representative scanned documents before relying on the extracted text.
 - The Markdown extraction is performed one page at a time.
 - Page markers are added as HTML comments, for example `<!-- Page 1 -->`.
 - Use `--no-page-markers` if you want the final Markdown without page markers.

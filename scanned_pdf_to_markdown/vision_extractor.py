@@ -21,32 +21,61 @@ DEFAULT_MODEL_ID = "cohere.command-a-vision"
 DEFAULT_EXTRACTION_PROMPT = "Extract all the text in the image."
 
 
-def image_file_to_data_url(image_path: Path, jpeg_quality: int = 85) -> str:
-    """Convert an image file to a JPEG data URL for multimodal model input.
+def _normalize_image_format(image_format: str) -> str:
+    """Normalize and validate model payload image format.
+
+    Args:
+        image_format: Requested image format.
+
+    Returns:
+        Normalized image format.
+
+    Raises:
+        ValueError: If the format is not supported.
+    """
+    normalized_format = image_format.lower().strip()
+    if normalized_format not in {"jpeg", "png"}:
+        raise ValueError("Image format must be either 'jpeg' or 'png'.")
+    return normalized_format
+
+
+def image_file_to_data_url(
+    image_path: Path,
+    image_format: str = "jpeg",
+    jpeg_quality: int = 85,
+) -> str:
+    """Convert an image file to a data URL for multimodal model input.
 
     Args:
         image_path: Path to the rendered page image.
-        jpeg_quality: JPEG quality for the in-memory encoded payload.
+        image_format: Payload image format, either ``jpeg`` or ``png``.
+        jpeg_quality: JPEG quality for the in-memory encoded payload when using JPEG.
 
     Returns:
-        Base64 data URL with ``image/jpeg`` MIME type.
+        Base64 data URL with the selected image MIME type.
 
     Raises:
         FileNotFoundError: If the image file does not exist.
-        ValueError: If JPEG quality is invalid.
+        ValueError: If image format or JPEG quality is invalid.
     """
     if not image_path.exists():
         raise FileNotFoundError(f"Image file not found: {image_path}")
     if not 1 <= jpeg_quality <= 100:
         raise ValueError("JPEG quality must be between 1 and 100.")
 
+    normalized_format = _normalize_image_format(image_format)
     with Image.open(image_path) as image:
-        rgb_image = image.convert("RGB")
         buffer = io.BytesIO()
-        rgb_image.save(buffer, format="JPEG", quality=jpeg_quality, optimize=True)
+        if normalized_format == "jpeg":
+            rgb_image = image.convert("RGB")
+            rgb_image.save(buffer, format="JPEG", quality=jpeg_quality, optimize=True)
+            mime_type = "image/jpeg"
+        else:
+            image.save(buffer, format="PNG", optimize=True)
+            mime_type = "image/png"
 
     encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    return f"data:image/jpeg;base64,{encoded}"
+    return f"data:{mime_type};base64,{encoded}"
 
 
 def build_vision_model(
@@ -123,6 +152,7 @@ def extract_markdown_from_image(
     image_path: Path,
     llm: Any,
     prompt: str = DEFAULT_EXTRACTION_PROMPT,
+    image_format: str = "jpeg",
     jpeg_quality: int = 85,
 ) -> str:
     """Extract Markdown text from one page image.
@@ -131,6 +161,7 @@ def extract_markdown_from_image(
         image_path: Image path for one rendered PDF page.
         llm: LangChain chat model with vision support.
         prompt: Extraction prompt sent with the image.
+        image_format: Payload image format, either ``jpeg`` or ``png``.
         jpeg_quality: JPEG quality for the in-memory data URL payload.
 
     Returns:
@@ -144,6 +175,7 @@ def extract_markdown_from_image(
 
     data_url = image_file_to_data_url(
         image_path=image_path,
+        image_format=image_format,
         jpeg_quality=jpeg_quality,
     )
     message = HumanMessage(

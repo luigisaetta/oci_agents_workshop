@@ -72,7 +72,7 @@ def convert_scanned_pdf_to_markdown(
     Returns:
         Path to the generated Markdown file.
     """
-    # 1. extract jpg images for all pages in the PDF
+    # 1. extract images for all pages in the PDF
     image_paths = render_pdf_to_images(
         pdf_path=pdf_path,
         output_dir=image_output_dir,
@@ -89,6 +89,7 @@ def convert_scanned_pdf_to_markdown(
             image_path=image_path,
             llm=llm,
             prompt=options.prompt,
+            image_format=options.image_format,
             jpeg_quality=options.jpeg_quality,
         )
         for image_path in image_paths
