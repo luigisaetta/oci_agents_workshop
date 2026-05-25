@@ -181,29 +181,3 @@ def render_pdf_to_images(
         document.close()
 
     return rendered_paths
-
-
-def render_pdf_to_png(
-    pdf_path: Path,
-    output_dir: Path,
-    dpi: int = DEFAULT_DPI,
-) -> List[Path]:
-    """Render each PDF page to a PNG image.
-
-    Args:
-        pdf_path: Path to the source PDF file.
-        output_dir: Directory where generated PNG files are written.
-        dpi: Rendering resolution in dots per inch.
-
-    Returns:
-        List of PNG image paths, ordered by page number.
-    """
-    return render_pdf_to_images(
-        pdf_path=pdf_path,
-        output_dir=output_dir,
-        options=ImageRenderOptions(
-            dpi=dpi,
-            image_format="png",
-            max_side=DEFAULT_MAX_SIDE,
-        ),
-    )
