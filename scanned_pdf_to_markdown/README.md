@@ -19,14 +19,38 @@ Install the project from the repository root:
 pip install -e ".[dev]"
 ```
 
-Configure OCI credentials as described in the root `README.md`, then set at least:
+Configure OCI credentials as described in the root `README.md`, then set the
+runtime variables either by exporting them in your shell or by adding them to
+the main `.env` file in the repository root.
+
+Option 1: export the variables directly in your shell:
+
+```bash
+export OCI_COMPARTMENT_ID="<your-compartment-ocid>"
+export OCI_REGION="us-chicago-1"
+export OCI_AUTH_TYPE="API_KEY"
+export OCI_AUTH_PROFILE="DEFAULT"
+```
+
+Option 2: put the same values in the root `.env` file:
 
 ```text
 OCI_COMPARTMENT_ID=<your-compartment-ocid>
-OCI_REGION=<your-region>
+OCI_REGION=us-chicago-1
 OCI_AUTH_TYPE=API_KEY
 OCI_AUTH_PROFILE=DEFAULT
 ```
+
+Environment variables already exported in the shell take precedence over values
+loaded from `.env`. This is the default behavior of `python-dotenv` when
+`load_dotenv()` is called without `override=True`.
+
+Variable defaults used by the shared runtime configuration:
+
+- `OCI_COMPARTMENT_ID`: required, no default.
+- `OCI_REGION`: defaults to `us-chicago-1`.
+- `OCI_AUTH_TYPE`: defaults to `API_KEY`.
+- `OCI_AUTH_PROFILE`: defaults to `DEFAULT`.
 
 The example uses `cohere.command-a-vision` by default. You can override it with
 `--model-id` if your tenancy uses a different model identifier or a dedicated
