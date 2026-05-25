@@ -8,12 +8,12 @@ Description: Command line entry point for scanned PDF Markdown extraction.
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 from typing import Dict
 
 from dotenv import load_dotenv
 
-from common.utils import collect_oci_runtime_config, print_oci_runtime_config
 from scanned_pdf_to_markdown.pdf_images import (
     DEFAULT_DPI,
     DEFAULT_IMAGE_FORMAT,
@@ -91,6 +91,32 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def collect_oci_runtime_config() -> Dict[str, str]:
+    """Build OCI runtime configuration from environment variables.
+
+    Returns:
+        Runtime config used by the scanned PDF vision model.
+
+    Raises:
+        ValueError: If ``OCI_COMPARTMENT_ID`` is missing.
+    """
+    model_id = os.getenv("OCI_MODEL_ID", DEFAULT_MODEL_ID)
+    region = os.getenv("OCI_REGION", "us-chicago-1")
+    service_endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
+    compartment_id = os.getenv("OCI_COMPARTMENT_ID", "")
+    if not compartment_id:
+        raise ValueError("Set OCI_COMPARTMENT_ID environment variable.")
+
+    return {
+        "OCI_MODEL_ID": model_id,
+        "OCI_REGION": region,
+        "OCI_SERVICE_ENDPOINT": service_endpoint,
+        "OCI_COMPARTMENT_ID": compartment_id,
+        "OCI_AUTH_TYPE": os.getenv("OCI_AUTH_TYPE", "API_KEY").strip(),
+        "OCI_AUTH_PROFILE": os.getenv("OCI_AUTH_PROFILE", "DEFAULT"),
+    }
+
+
 def apply_model_override(
     runtime_config: Dict[str, str], model_id: str
 ) -> Dict[str, str]:
@@ -108,6 +134,21 @@ def apply_model_override(
     return effective_config
 
 
+def print_runtime_config(config: Dict[str, str]) -> None:
+    """Print effective OCI runtime configuration values.
+
+    Args:
+        config: Runtime configuration dictionary to print.
+
+    Returns:
+        None. This function writes to stdout.
+    """
+    print("-------- OCI Runtime Configuration --------")
+    for key, value in config.items():
+        print(f"  {key}={value}")
+    print("---")
+
+
 def main() -> None:
     """Run the scanned PDF to Markdown pipeline."""
     parser = build_parser()
@@ -116,7 +157,7 @@ def main() -> None:
     load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
     runtime_config = collect_oci_runtime_config()
     effective_config = apply_model_override(runtime_config, args.model_id)
-    print_oci_runtime_config(effective_config)
+    print_runtime_config(effective_config)
 
     llm = build_vision_model(
         runtime_config=effective_config,

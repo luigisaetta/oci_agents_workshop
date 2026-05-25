@@ -97,7 +97,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from common.utils import collect_oci_runtime_config
+from scanned_pdf_to_markdown.cli import collect_oci_runtime_config
 from scanned_pdf_to_markdown.pipeline import (
     ConversionOptions,
     convert_scanned_pdf_to_markdown,

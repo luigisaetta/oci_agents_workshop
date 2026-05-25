@@ -16,8 +16,6 @@ from langchain_core.messages import HumanMessage
 from langchain_oci import ChatOCIGenAI
 from PIL import Image
 
-from common.utils import extract_text
-
 DEFAULT_MODEL_ID = "cohere.command-a-vision"
 
 DEFAULT_EXTRACTION_PROMPT = "Extract all the text in the image."
@@ -93,6 +91,32 @@ def clean_markdown_response(markdown_text: str) -> str:
     if text.startswith("```") and text.endswith("```"):
         return text[len("```") : -len("```")].strip()
     return text
+
+
+def extract_text(response: Any) -> str:
+    """Extract plain text from common LangChain model response shapes.
+
+    Args:
+        response: Model response object, string, or list-like structured payload.
+
+    Returns:
+        Extracted text content.
+    """
+    content = response.content if hasattr(response, "content") else response
+
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, list):
+        text_parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                text_parts.append(item)
+            elif isinstance(item, dict) and "text" in item:
+                text_parts.append(str(item["text"]))
+        return "".join(text_parts)
+
+    return str(content)
 
 
 def extract_markdown_from_image(

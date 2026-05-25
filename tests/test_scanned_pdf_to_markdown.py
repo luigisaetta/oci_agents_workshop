@@ -87,6 +87,13 @@ def test_image_file_to_data_url_encodes_jpeg_payload(tmp_path: Path) -> None:
     assert data_url.startswith("data:image/jpeg;base64,")
 
 
+def test_extract_text_reads_structured_content() -> None:
+    """It should extract text from segmented response content."""
+    response = SimpleNamespace(content=[{"text": "hello"}, " world"])
+
+    assert vision_extractor.extract_text(response) == "hello world"
+
+
 def test_extract_markdown_from_image_requires_existing_image(tmp_path: Path) -> None:
     """It should reject missing image files before model invocation."""
     with pytest.raises(FileNotFoundError):
@@ -128,6 +135,39 @@ def test_apply_model_override_updates_printed_runtime_config() -> None:
 
     assert effective_config["OCI_MODEL_ID"] == "cohere.command-a-vision"
     assert runtime_config["OCI_MODEL_ID"] == "openai.gpt-oss-120b"
+
+
+def test_collect_oci_runtime_config_uses_local_defaults(monkeypatch) -> None:
+    """It should build runtime config without importing common utilities."""
+    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
+    monkeypatch.delenv("OCI_MODEL_ID", raising=False)
+    monkeypatch.delenv("OCI_REGION", raising=False)
+    monkeypatch.delenv("OCI_AUTH_TYPE", raising=False)
+    monkeypatch.delenv("OCI_AUTH_PROFILE", raising=False)
+
+    runtime_config = cli.collect_oci_runtime_config()
+
+    assert runtime_config["OCI_MODEL_ID"] == "cohere.command-a-vision"
+    assert runtime_config["OCI_REGION"] == "us-chicago-1"
+    assert runtime_config["OCI_AUTH_TYPE"] == "API_KEY"
+    assert runtime_config["OCI_AUTH_PROFILE"] == "DEFAULT"
+
+
+def test_collect_oci_runtime_config_requires_compartment(monkeypatch) -> None:
+    """It should fail fast when OCI compartment is not configured."""
+    monkeypatch.delenv("OCI_COMPARTMENT_ID", raising=False)
+
+    with pytest.raises(ValueError):
+        cli.collect_oci_runtime_config()
+
+
+def test_print_runtime_config_outputs_effective_model(capsys) -> None:
+    """It should print the model from the effective runtime config."""
+    cli.print_runtime_config({"OCI_MODEL_ID": "cohere.command-a-vision"})
+
+    captured = capsys.readouterr()
+
+    assert "OCI_MODEL_ID=cohere.command-a-vision" in captured.out
 
 
 def test_validate_image_options_rejects_invalid_format() -> None:
