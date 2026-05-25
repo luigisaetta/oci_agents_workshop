@@ -9,6 +9,7 @@ The format is inspired by Keep a Changelog and uses semantic sections.
 ### Added
 - Added `scanned_pdf_to_markdown/`, a backend example that renders scanned PDF pages to image files, sends them to `cohere.command-a-vision` through `langchain-oci`, and assembles extracted Markdown into a single output file.
 - Added unit tests in `tests/test_scanned_pdf_to_markdown.py` for Markdown cleanup, document assembly, multimodal message creation, path defaults, and pipeline orchestration.
+- Added an in-memory `scanned_pdf_to_markdown` conversion path that avoids writing rendered page images and can return Markdown text directly.
 
 ### Changed
 - Updated `scanned_pdf_to_markdown/` rendering defaults to use 200 DPI, JPEG output, max-side resizing, and a stricter OCR prompt for more stable multimodal extraction.

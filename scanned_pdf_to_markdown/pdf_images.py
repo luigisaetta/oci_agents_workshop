@@ -181,3 +181,46 @@ def render_pdf_to_images(
         document.close()
 
     return rendered_paths
+
+
+def render_pdf_to_image_objects(
+    pdf_path: Path,
+    options: ImageRenderOptions = ImageRenderOptions(),
+) -> List[Image.Image]:
+    """Render each PDF page to an in-memory image object.
+
+    Args:
+        pdf_path: Path to the source PDF file.
+        options: Image rendering options.
+
+    Returns:
+        List of PIL images, ordered by page number.
+
+    Raises:
+        FileNotFoundError: If the source PDF does not exist.
+        ValueError: If the source file or rendering options are invalid.
+    """
+    if not pdf_path.exists():
+        raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+    if pdf_path.suffix.lower() != ".pdf":
+        raise ValueError(f"Expected a PDF file, got: {pdf_path}")
+
+    validate_image_options(options)
+    scale = options.dpi / 72.0
+    rendered_images: List[Image.Image] = []
+
+    document = pdfium.PdfDocument(str(pdf_path))
+    try:
+        for page_index in range(len(document)):
+            rendered_images.append(
+                _render_page_to_image(
+                    document=document,
+                    page_index=page_index,
+                    scale=scale,
+                    max_side=options.max_side,
+                )
+            )
+    finally:
+        document.close()
+
+    return rendered_images

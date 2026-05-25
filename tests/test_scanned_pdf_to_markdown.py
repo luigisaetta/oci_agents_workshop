@@ -100,6 +100,28 @@ def test_image_file_to_data_url_encodes_png_payload(tmp_path: Path) -> None:
     assert data_url.startswith("data:image/png;base64,")
 
 
+def test_image_to_data_url_encodes_in_memory_image() -> None:
+    """It should encode in-memory images without requiring a temporary file."""
+    image = Image.new("RGB", (8, 8), color="white")
+
+    data_url = vision_extractor.image_to_data_url(image)
+
+    assert data_url.startswith("data:image/jpeg;base64,")
+
+
+def test_extract_markdown_from_image_object_uses_multimodal_message() -> None:
+    """It should send an in-memory image to the model."""
+    image = Image.new("RGB", (8, 8), color="white")
+
+    markdown = vision_extractor.extract_markdown_from_image_object(
+        image=image,
+        llm=SimpleNamespace(invoke=_fake_invoke),
+        prompt="Extract text.",
+    )
+
+    assert markdown == "# Extracted\n\nText"
+
+
 def test_extract_text_reads_structured_content() -> None:
     """It should extract text from segmented response content."""
     response = SimpleNamespace(content=[{"text": "hello"}, " world"])
@@ -252,3 +274,76 @@ def test_convert_scanned_pdf_to_markdown_orchestrates_steps(
     assert output_path.read_text(encoding="utf-8") == (
         "<!-- Page 1 -->\n\n# page_001\n\n" "<!-- Page 2 -->\n\n# page_002\n"
     )
+
+
+def test_convert_scanned_pdf_to_markdown_text_avoids_image_files(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """It should render pages in memory and return assembled Markdown."""
+    pdf_path = tmp_path / "sample.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n")
+    images = [
+        Image.new("RGB", (8, 8), color="white"),
+        Image.new("RGB", (8, 8), color="white"),
+    ]
+    image_numbers = {id(image): index for index, image in enumerate(images, start=1)}
+
+    def _fake_render_pdf_to_image_objects(pdf_path, options):
+        assert pdf_path.name == "sample.pdf"
+        assert options.dpi == 200
+        assert options.image_format == "jpeg"
+        assert options.max_side == 1600
+        assert options.jpeg_quality == 85
+        return images
+
+    def _fake_extract_markdown_from_image_object(
+        image,
+        llm,
+        prompt,
+        image_format,
+        jpeg_quality,
+    ):
+        assert any(image is item for item in images)
+        assert llm == "fake-llm"
+        assert prompt == "Extract."
+        assert image_format == "jpeg"
+        assert jpeg_quality == 85
+        return f"# Page {image_numbers[id(image)]}"
+
+    monkeypatch.setattr(
+        pipeline,
+        "render_pdf_to_image_objects",
+        _fake_render_pdf_to_image_objects,
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "extract_markdown_from_image_object",
+        _fake_extract_markdown_from_image_object,
+    )
+
+    markdown = pipeline.convert_scanned_pdf_to_markdown_text(
+        pdf_path=pdf_path,
+        llm="fake-llm",
+        options=pipeline.ConversionOptions(prompt="Extract."),
+    )
+
+    assert markdown == (
+        "<!-- Page 1 -->\n\n# Page 1\n\n" "<!-- Page 2 -->\n\n# Page 2\n"
+    )
+
+
+def test_cli_parser_accepts_in_memory_and_stdout_flags() -> None:
+    """It should expose in-memory conversion modes from the CLI."""
+    parser = cli.build_parser()
+
+    args = parser.parse_args(
+        [
+            "input_pdf/sample.pdf",
+            "--in-memory",
+            "--stdout",
+        ]
+    )
+
+    assert args.in_memory is True
+    assert args.stdout is True

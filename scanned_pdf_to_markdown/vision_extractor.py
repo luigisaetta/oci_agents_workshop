@@ -39,6 +39,41 @@ def _normalize_image_format(image_format: str) -> str:
     return normalized_format
 
 
+def image_to_data_url(
+    image: Image.Image,
+    image_format: str = "jpeg",
+    jpeg_quality: int = 85,
+) -> str:
+    """Convert an image object to a data URL for multimodal model input.
+
+    Args:
+        image: Rendered page image.
+        image_format: Payload image format, either ``jpeg`` or ``png``.
+        jpeg_quality: JPEG quality for the in-memory encoded payload when using JPEG.
+
+    Returns:
+        Base64 data URL with the selected image MIME type.
+
+    Raises:
+        ValueError: If image format or JPEG quality is invalid.
+    """
+    if not 1 <= jpeg_quality <= 100:
+        raise ValueError("JPEG quality must be between 1 and 100.")
+
+    normalized_format = _normalize_image_format(image_format)
+    buffer = io.BytesIO()
+    if normalized_format == "jpeg":
+        rgb_image = image.convert("RGB")
+        rgb_image.save(buffer, format="JPEG", quality=jpeg_quality, optimize=True)
+        mime_type = "image/jpeg"
+    else:
+        image.save(buffer, format="PNG", optimize=True)
+        mime_type = "image/png"
+
+    encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return f"data:{mime_type};base64,{encoded}"
+
+
 def image_file_to_data_url(
     image_path: Path,
     image_format: str = "jpeg",
@@ -60,22 +95,13 @@ def image_file_to_data_url(
     """
     if not image_path.exists():
         raise FileNotFoundError(f"Image file not found: {image_path}")
-    if not 1 <= jpeg_quality <= 100:
-        raise ValueError("JPEG quality must be between 1 and 100.")
 
-    normalized_format = _normalize_image_format(image_format)
     with Image.open(image_path) as image:
-        buffer = io.BytesIO()
-        if normalized_format == "jpeg":
-            rgb_image = image.convert("RGB")
-            rgb_image.save(buffer, format="JPEG", quality=jpeg_quality, optimize=True)
-            mime_type = "image/jpeg"
-        else:
-            image.save(buffer, format="PNG", optimize=True)
-            mime_type = "image/png"
-
-    encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    return f"data:{mime_type};base64,{encoded}"
+        return image_to_data_url(
+            image=image,
+            image_format=image_format,
+            jpeg_quality=jpeg_quality,
+        )
 
 
 def build_vision_model(
@@ -175,6 +201,44 @@ def extract_markdown_from_image(
 
     data_url = image_file_to_data_url(
         image_path=image_path,
+        image_format=image_format,
+        jpeg_quality=jpeg_quality,
+    )
+    message = HumanMessage(
+        content=[
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": data_url}},
+        ]
+    )
+    response = llm.invoke([message])
+
+    return clean_markdown_response(extract_text(response))
+
+
+def extract_markdown_from_image_object(
+    image: Image.Image,
+    llm: Any,
+    prompt: str = DEFAULT_EXTRACTION_PROMPT,
+    image_format: str = "jpeg",
+    jpeg_quality: int = 85,
+) -> str:
+    """Extract Markdown text from one in-memory page image.
+
+    Args:
+        image: Rendered page image.
+        llm: LangChain chat model with vision support.
+        prompt: Extraction prompt sent with the image.
+        image_format: Payload image format, either ``jpeg`` or ``png``.
+        jpeg_quality: JPEG quality for the in-memory data URL payload.
+
+    Returns:
+        Markdown text extracted from the image.
+
+    Raises:
+        ValueError: If image format or JPEG quality is invalid.
+    """
+    data_url = image_to_data_url(
+        image=image,
         image_format=image_format,
         jpeg_quality=jpeg_quality,
     )

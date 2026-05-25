@@ -20,9 +20,11 @@ from scanned_pdf_to_markdown.pdf_images import (
     DEFAULT_JPEG_QUALITY,
     DEFAULT_MAX_SIDE,
 )
+from scanned_pdf_to_markdown.document_writer import write_markdown_document
 from scanned_pdf_to_markdown.pipeline import (
     ConversionOptions,
     convert_scanned_pdf_to_markdown,
+    convert_scanned_pdf_to_markdown_text,
     default_image_output_dir,
     default_output_path,
 )
@@ -87,6 +89,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-page-markers",
         action="store_true",
         help="Do not add page markers to the final Markdown document.",
+    )
+    parser.add_argument(
+        "--in-memory",
+        action="store_true",
+        help="Do not write rendered page images to disk.",
+    )
+    parser.add_argument(
+        "--stdout",
+        action="store_true",
+        help="Print Markdown to stdout instead of writing a Markdown file.",
     )
     return parser
 
@@ -157,7 +169,8 @@ def main() -> None:
     load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
     runtime_config = collect_oci_runtime_config()
     effective_config = apply_model_override(runtime_config, args.model_id)
-    print_runtime_config(effective_config)
+    if not args.stdout:
+        print_runtime_config(effective_config)
 
     llm = build_vision_model(
         runtime_config=effective_config,
@@ -165,19 +178,42 @@ def main() -> None:
     )
     output_path = default_output_path(args.pdf_path, args.output)
     image_output_dir = default_image_output_dir(args.pdf_path, args.image_output_dir)
+    options = ConversionOptions(
+        dpi=args.dpi,
+        image_format=args.image_format,
+        max_side=args.max_side,
+        jpeg_quality=args.jpeg_quality,
+        include_page_markers=not args.no_page_markers,
+    )
+
+    if args.stdout:
+        markdown_text = convert_scanned_pdf_to_markdown_text(
+            pdf_path=args.pdf_path,
+            llm=llm,
+            options=options,
+        )
+        print(markdown_text, end="")
+        return
+
+    if args.in_memory:
+        markdown_text = convert_scanned_pdf_to_markdown_text(
+            pdf_path=args.pdf_path,
+            llm=llm,
+            options=options,
+        )
+        write_markdown_document(
+            output_path=output_path,
+            markdown_text=markdown_text,
+        )
+        print(f"Markdown file written to: {output_path}")
+        return
 
     result_path = convert_scanned_pdf_to_markdown(
         pdf_path=args.pdf_path,
         output_path=output_path,
         image_output_dir=image_output_dir,
         llm=llm,
-        options=ConversionOptions(
-            dpi=args.dpi,
-            image_format=args.image_format,
-            max_side=args.max_side,
-            jpeg_quality=args.jpeg_quality,
-            include_page_markers=not args.no_page_markers,
-        ),
+        options=options,
     )
     print(f"Markdown file written to: {result_path}")
 

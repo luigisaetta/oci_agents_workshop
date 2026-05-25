@@ -72,6 +72,24 @@ output/sample_scanned_pages/
 output/sample_scanned.md
 ```
 
+If you do not need to inspect the rendered page images, use the in-memory mode:
+
+```bash
+python -m scanned_pdf_to_markdown.cli \
+  input_pdf/sample_scanned.pdf \
+  --in-memory
+```
+
+This still writes the final Markdown file, but it does not create the
+`output/<pdf-name>_pages/` directory. To avoid writing any output file and send
+the Markdown directly to stdout:
+
+```bash
+python -m scanned_pdf_to_markdown.cli \
+  input_pdf/sample_scanned.pdf \
+  --stdout
+```
+
 By default, pages are rendered at 200 DPI, resized to a maximum side of 1600
 pixels, and saved as JPEG with quality 85. The same image format is used for the
 payload sent to the model. JPEG is the recommended default because it keeps the
@@ -102,6 +120,7 @@ from scanned_pdf_to_markdown.cli import collect_oci_runtime_config
 from scanned_pdf_to_markdown.pipeline import (
     ConversionOptions,
     convert_scanned_pdf_to_markdown,
+    convert_scanned_pdf_to_markdown_text,
 )
 from scanned_pdf_to_markdown.vision_extractor import build_vision_model
 
@@ -127,6 +146,33 @@ def convert_document(pdf_path: Path) -> Path:
         pdf_path=pdf_path,
         output_path=output_path,
         image_output_dir=image_output_dir,
+        llm=llm,
+        options=ConversionOptions(
+            dpi=200,
+            image_format="jpeg",
+            max_side=1600,
+            jpeg_quality=85,
+            include_page_markers=True,
+        ),
+    )
+
+
+def convert_document_to_text(pdf_path: Path) -> str:
+    """Convert one scanned PDF into Markdown without writing files.
+
+    Args:
+        pdf_path: Path to the scanned PDF file.
+
+    Returns:
+        Extracted Markdown text.
+    """
+    load_dotenv(".env")
+
+    runtime_config = collect_oci_runtime_config()
+    llm = build_vision_model(runtime_config)
+
+    return convert_scanned_pdf_to_markdown_text(
+        pdf_path=pdf_path,
         llm=llm,
         options=ConversionOptions(
             dpi=200,

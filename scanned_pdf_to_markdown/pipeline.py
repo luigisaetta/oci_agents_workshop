@@ -21,11 +21,13 @@ from scanned_pdf_to_markdown.pdf_images import (
     DEFAULT_JPEG_QUALITY,
     DEFAULT_MAX_SIDE,
     ImageRenderOptions,
+    render_pdf_to_image_objects,
     render_pdf_to_images,
 )
 from scanned_pdf_to_markdown.vision_extractor import (
     DEFAULT_EXTRACTION_PROMPT,
     extract_markdown_from_image,
+    extract_markdown_from_image_object,
 )
 
 
@@ -103,6 +105,51 @@ def convert_scanned_pdf_to_markdown(
     return write_markdown_document(
         output_path=output_path,
         markdown_text=document_markdown,
+    )
+
+
+def convert_scanned_pdf_to_markdown_text(
+    pdf_path: Path,
+    llm: Any,
+    options: ConversionOptions = ConversionOptions(),
+) -> str:
+    """Convert a scanned PDF into Markdown without writing intermediate files.
+
+    Args:
+        pdf_path: Source scanned PDF path.
+        llm: LangChain multimodal model used for image extraction.
+        options: Conversion options.
+
+    Returns:
+        Markdown text extracted from the scanned PDF.
+
+    Raises:
+        FileNotFoundError: If the source PDF does not exist.
+        ValueError: If the source file or rendering options are invalid.
+    """
+    page_images = render_pdf_to_image_objects(
+        pdf_path=pdf_path,
+        options=ImageRenderOptions(
+            dpi=options.dpi,
+            image_format=options.image_format,
+            max_side=options.max_side,
+            jpeg_quality=options.jpeg_quality,
+        ),
+    )
+    page_markdown = [
+        extract_markdown_from_image_object(
+            image=image,
+            llm=llm,
+            prompt=options.prompt,
+            image_format=options.image_format,
+            jpeg_quality=options.jpeg_quality,
+        )
+        for image in page_images
+    ]
+
+    return assemble_markdown_document(
+        page_markdown=page_markdown,
+        include_page_markers=options.include_page_markers,
     )
 
 
