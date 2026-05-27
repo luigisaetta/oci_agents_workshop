@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-05-25
+Date last modified: 2026-05-27
 License: MIT
 Description: Tests for the scanned PDF to Markdown backend example.
 """
@@ -77,6 +77,32 @@ def test_extract_markdown_from_image_uses_multimodal_message(tmp_path: Path) -> 
     assert markdown == "# Extracted\n\nText"
 
 
+def test_extract_markdown_from_image_logs_llm_duration(
+    caplog,
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """It should log only the LLM invocation duration with two decimals."""
+    image_path = tmp_path / "page.jpg"
+    Image.new("RGB", (8, 8), color="white").save(image_path)
+    perf_counter_values = iter([10.0, 11.234])
+    monkeypatch.setattr(
+        vision_extractor.time,
+        "perf_counter",
+        lambda: next(perf_counter_values),
+    )
+
+    with caplog.at_level("INFO", logger=vision_extractor.__name__):
+        markdown = vision_extractor.extract_markdown_from_image(
+            image_path=image_path,
+            llm=SimpleNamespace(invoke=_fake_invoke),
+            prompt="Extract text.",
+        )
+
+    assert markdown == "# Extracted\n\nText"
+    assert "LLM call duration: 1.23 secs" in caplog.text
+
+
 def test_image_file_to_data_url_encodes_jpeg_payload(tmp_path: Path) -> None:
     """It should encode rendered images as JPEG data URLs."""
     image_path = tmp_path / "page.png"
@@ -98,6 +124,28 @@ def test_image_file_to_data_url_encodes_png_payload(tmp_path: Path) -> None:
     )
 
     assert data_url.startswith("data:image/png;base64,")
+
+
+def test_build_model_kwargs_uses_max_tokens_by_default() -> None:
+    """It should use max_tokens for non GPT-5 models."""
+    model_kwargs = vision_extractor.build_model_kwargs(
+        model_id="cohere.command-a-vision",
+        temperature=0.0,
+        max_tokens=4096,
+    )
+
+    assert model_kwargs == {"temperature": 0.0, "max_tokens": 4096}
+
+
+def test_build_model_kwargs_uses_max_completion_tokens_for_gpt5() -> None:
+    """It should use max_completion_tokens for GPT-5 models."""
+    model_kwargs = vision_extractor.build_model_kwargs(
+        model_id="openai.gpt-5.1",
+        temperature=0.0,
+        max_tokens=4096,
+    )
+
+    assert model_kwargs == {"temperature": 0.0, "max_completion_tokens": 4096}
 
 
 def test_image_to_data_url_encodes_in_memory_image() -> None:
@@ -172,6 +220,18 @@ def test_apply_model_override_updates_printed_runtime_config() -> None:
     assert runtime_config["OCI_MODEL_ID"] == "openai.gpt-oss-120b"
 
 
+def test_apply_model_override_keeps_environment_model_by_default() -> None:
+    """It should keep the environment model when the CLI does not override it."""
+    runtime_config = {
+        "OCI_MODEL_ID": "openai.gpt-oss-120b",
+        "OCI_REGION": "us-chicago-1",
+    }
+
+    effective_config = cli.apply_model_override(runtime_config, None)
+
+    assert effective_config["OCI_MODEL_ID"] == "openai.gpt-oss-120b"
+
+
 def test_collect_oci_runtime_config_uses_local_defaults(monkeypatch) -> None:
     """It should build runtime config without importing common utilities."""
     monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
@@ -186,6 +246,19 @@ def test_collect_oci_runtime_config_uses_local_defaults(monkeypatch) -> None:
     assert runtime_config["OCI_REGION"] == "us-chicago-1"
     assert runtime_config["OCI_AUTH_TYPE"] == "API_KEY"
     assert runtime_config["OCI_AUTH_PROFILE"] == "DEFAULT"
+
+
+def test_collect_oci_runtime_config_uses_environment_model(monkeypatch) -> None:
+    """It should use OCI_MODEL_ID when configured in the environment."""
+    monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
+    monkeypatch.setenv("OCI_MODEL_ID", "custom.vision-model")
+    monkeypatch.delenv("OCI_REGION", raising=False)
+    monkeypatch.delenv("OCI_AUTH_TYPE", raising=False)
+    monkeypatch.delenv("OCI_AUTH_PROFILE", raising=False)
+
+    runtime_config = cli.collect_oci_runtime_config()
+
+    assert runtime_config["OCI_MODEL_ID"] == "custom.vision-model"
 
 
 def test_collect_oci_runtime_config_requires_compartment(monkeypatch) -> None:
@@ -203,6 +276,21 @@ def test_print_runtime_config_outputs_effective_model(capsys) -> None:
     captured = capsys.readouterr()
 
     assert "OCI_MODEL_ID=cohere.command-a-vision" in captured.out
+
+
+def test_configure_logging_enables_info_logs(monkeypatch) -> None:
+    """It should configure CLI logs at INFO level."""
+    captured_config = {}
+
+    def _fake_basic_config(**kwargs):
+        captured_config.update(kwargs)
+
+    monkeypatch.setattr(cli.logging, "basicConfig", _fake_basic_config)
+
+    cli.configure_logging()
+
+    assert captured_config["level"] == cli.logging.INFO
+    assert captured_config["format"] == "%(levelname)s:%(name)s:%(message)s"
 
 
 def test_validate_image_options_rejects_invalid_format() -> None:
@@ -347,3 +435,12 @@ def test_cli_parser_accepts_in_memory_and_stdout_flags() -> None:
 
     assert args.in_memory is True
     assert args.stdout is True
+
+
+def test_cli_parser_does_not_override_environment_model_by_default() -> None:
+    """It should leave model selection to the runtime config by default."""
+    parser = cli.build_parser()
+
+    args = parser.parse_args(["input_pdf/sample.pdf"])
+
+    assert args.model_id is None

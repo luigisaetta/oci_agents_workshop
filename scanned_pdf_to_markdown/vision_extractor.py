@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-05-25
+Date last modified: 2026-05-27
 License: MIT
 Description: Extract Markdown text from page images with OCI vision models.
 """
@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
+import time
 from pathlib import Path
 from typing import Any, Dict
 
@@ -19,6 +21,8 @@ from PIL import Image
 DEFAULT_MODEL_ID = "cohere.command-a-vision"
 
 DEFAULT_EXTRACTION_PROMPT = "Extract all the text in the image."
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _normalize_image_format(image_format: str) -> str:
@@ -104,6 +108,32 @@ def image_file_to_data_url(
         )
 
 
+def build_model_kwargs(
+    model_id: str,
+    temperature: float,
+    max_tokens: int,
+) -> Dict[str, Any]:
+    """Build model kwargs with provider-specific token parameter names.
+
+    Args:
+        model_id: OCI model ID for the vision model.
+        temperature: Sampling temperature.
+        max_tokens: Maximum output tokens for each page extraction.
+
+    Returns:
+        Model keyword arguments for ``ChatOCIGenAI``.
+    """
+    token_parameter_name = "max_tokens"
+    normalized_model_id = model_id.lower()
+    if normalized_model_id.startswith("gpt-5") or ".gpt-5" in normalized_model_id:
+        token_parameter_name = "max_completion_tokens"
+
+    return {
+        "temperature": temperature,
+        token_parameter_name: max_tokens,
+    }
+
+
 def build_vision_model(
     runtime_config: Dict[str, str],
     model_id: str = DEFAULT_MODEL_ID,
@@ -127,7 +157,11 @@ def build_vision_model(
         compartment_id=runtime_config["OCI_COMPARTMENT_ID"],
         auth_type=runtime_config["OCI_AUTH_TYPE"],
         auth_profile=runtime_config["OCI_AUTH_PROFILE"],
-        model_kwargs={"temperature": temperature, "max_tokens": max_tokens},
+        model_kwargs=build_model_kwargs(
+            model_id=model_id,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        ),
     )
 
 
@@ -174,6 +208,23 @@ def extract_text(response: Any) -> str:
     return str(content)
 
 
+def invoke_llm_with_timing(llm: Any, messages: list[HumanMessage]) -> Any:
+    """Invoke the LLM and log the model call duration.
+
+    Args:
+        llm: LangChain chat model with vision support.
+        messages: Messages to send to the model.
+
+    Returns:
+        Model response returned by ``llm.invoke``.
+    """
+    start_time = time.perf_counter()
+    response = llm.invoke(messages)
+    elapsed_seconds = time.perf_counter() - start_time
+    LOGGER.info("LLM call duration: %.2f secs", elapsed_seconds)
+    return response
+
+
 def extract_markdown_from_image(
     image_path: Path,
     llm: Any,
@@ -210,7 +261,7 @@ def extract_markdown_from_image(
             {"type": "image_url", "image_url": {"url": data_url}},
         ]
     )
-    response = llm.invoke([message])
+    response = invoke_llm_with_timing(llm, [message])
 
     return clean_markdown_response(extract_text(response))
 
@@ -248,6 +299,6 @@ def extract_markdown_from_image_object(
             {"type": "image_url", "image_url": {"url": data_url}},
         ]
     )
-    response = llm.invoke([message])
+    response = invoke_llm_with_timing(llm, [message])
 
     return clean_markdown_response(extract_text(response))

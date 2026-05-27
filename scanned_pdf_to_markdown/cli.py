@@ -1,6 +1,6 @@
 """
 Author: L. Saetta
-Date last modified: 2026-05-25
+Date last modified: 2026-05-27
 License: MIT
 Description: Command line entry point for scanned PDF Markdown extraction.
 """
@@ -8,9 +8,10 @@ Description: Command line entry point for scanned PDF Markdown extraction.
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from dotenv import load_dotenv
 
@@ -82,8 +83,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--model-id",
-        default=DEFAULT_MODEL_ID,
-        help=f"OCI vision model ID. Default: {DEFAULT_MODEL_ID}.",
+        default=None,
+        help=(
+            "OCI vision model ID. Defaults to OCI_MODEL_ID when set, "
+            f"otherwise {DEFAULT_MODEL_ID}."
+        ),
     )
     parser.add_argument(
         "--no-page-markers",
@@ -130,19 +134,20 @@ def collect_oci_runtime_config() -> Dict[str, str]:
 
 
 def apply_model_override(
-    runtime_config: Dict[str, str], model_id: str
+    runtime_config: Dict[str, str], model_id: Optional[str]
 ) -> Dict[str, str]:
     """Return runtime configuration with the effective model ID.
 
     Args:
         runtime_config: Runtime configuration loaded from environment variables.
-        model_id: Model ID selected by the CLI arguments.
+        model_id: Optional model ID selected by the CLI arguments.
 
     Returns:
-        Runtime configuration copy with ``OCI_MODEL_ID`` set to the effective model.
+        Runtime configuration copy with the effective ``OCI_MODEL_ID``.
     """
     effective_config = dict(runtime_config)
-    effective_config["OCI_MODEL_ID"] = model_id
+    if model_id is not None:
+        effective_config["OCI_MODEL_ID"] = model_id
     return effective_config
 
 
@@ -161,10 +166,23 @@ def print_runtime_config(config: Dict[str, str]) -> None:
     print("---")
 
 
+def configure_logging() -> None:
+    """Configure command line logging.
+
+    Returns:
+        None. This function configures the root logger.
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)s:%(name)s:%(message)s",
+    )
+
+
 def main() -> None:
     """Run the scanned PDF to Markdown pipeline."""
     parser = build_parser()
     args = parser.parse_args()
+    configure_logging()
 
     load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
     runtime_config = collect_oci_runtime_config()
