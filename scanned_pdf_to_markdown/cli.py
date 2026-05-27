@@ -151,6 +151,27 @@ def apply_model_override(
     return effective_config
 
 
+def resolve_model_id(
+    cli_model_id: Optional[str],
+    environment_model_id: Optional[str],
+) -> str:
+    """Resolve the model ID for scanned PDF extraction.
+
+    Args:
+        cli_model_id: Optional model ID selected by the CLI arguments.
+        environment_model_id: Optional ``OCI_MODEL_ID`` already present before
+            loading local ``.env`` defaults.
+
+    Returns:
+        Effective model ID for the vision extraction model.
+    """
+    if cli_model_id:
+        return cli_model_id
+    if environment_model_id:
+        return environment_model_id
+    return DEFAULT_MODEL_ID
+
+
 def print_runtime_config(config: Dict[str, str]) -> None:
     """Print effective OCI runtime configuration values.
 
@@ -184,9 +205,16 @@ def main() -> None:
     args = parser.parse_args()
     configure_logging()
 
+    environment_model_id = os.environ.get("OCI_MODEL_ID")
     load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
     runtime_config = collect_oci_runtime_config()
-    effective_config = apply_model_override(runtime_config, args.model_id)
+    effective_config = apply_model_override(
+        runtime_config,
+        resolve_model_id(
+            cli_model_id=args.model_id,
+            environment_model_id=environment_model_id,
+        ),
+    )
     if not args.stdout:
         print_runtime_config(effective_config)
 

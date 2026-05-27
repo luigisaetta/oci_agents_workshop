@@ -232,6 +232,36 @@ def test_apply_model_override_keeps_environment_model_by_default() -> None:
     assert effective_config["OCI_MODEL_ID"] == "openai.gpt-oss-120b"
 
 
+def test_resolve_model_id_prefers_cli_model() -> None:
+    """It should let an explicit CLI model override other model sources."""
+    model_id = cli.resolve_model_id(
+        cli_model_id="openai.gpt-5.1",
+        environment_model_id="custom.vision-model",
+    )
+
+    assert model_id == "openai.gpt-5.1"
+
+
+def test_resolve_model_id_uses_existing_environment_model() -> None:
+    """It should use OCI_MODEL_ID when it exists before loading .env."""
+    model_id = cli.resolve_model_id(
+        cli_model_id=None,
+        environment_model_id="custom.vision-model",
+    )
+
+    assert model_id == "custom.vision-model"
+
+
+def test_resolve_model_id_uses_vision_default_without_explicit_model() -> None:
+    """It should keep the scanned PDF vision default without explicit model input."""
+    model_id = cli.resolve_model_id(
+        cli_model_id=None,
+        environment_model_id=None,
+    )
+
+    assert model_id == "cohere.command-a-vision"
+
+
 def test_collect_oci_runtime_config_uses_local_defaults(monkeypatch) -> None:
     """It should build runtime config without importing common utilities."""
     monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..example")
